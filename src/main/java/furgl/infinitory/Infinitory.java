@@ -5,9 +5,9 @@ import net.fabricmc.api.ModInitializer;
 
 public class Infinitory implements ModInitializer {
 	
-	// FIXME large stacks don't seem to persist on save 
-	//    (prob same issue when going from creative -> survival stacks disappearing)
-	// FIXME dragging stacks doesn't show correct number
+	// TEST on dedicated server
+	// TEST creative inventory
+	// TODO what happens when player dies?
 
 	public static final String MODNAME = "Infinitory";
 	public static final String MODID = "infinitory";

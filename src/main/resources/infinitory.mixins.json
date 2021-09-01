@@ -4,15 +4,22 @@
   "package": "furgl.infinitory.mixin",
   "compatibilityLevel": "JAVA_8",
   "mixins": [
-  "PlayerInventoryMixin"
+  "inventory.PlayerInventoryMixin",
+  "inventory.PlayerScreenHandlerMixin",
+  "inventory.ScreenHandlerAccessor",
+  "inventory.ScreenHandlerMixin",
+  "inventory.SlotAccessor",
+  "items.ItemStackMixin",
+  "PacketByteBufMixin",
+  "inventory.SlotMixin"
       ],
   "client": [
-  "InventoryScreenMixin",
-  "PlayerScreenHandlerMixin",
-  "ScreenHandlerMixin",
-  "HandledScreenMixin",
-  "ItemRendererMixin"
-  ],
+  "render.HandledScreenMixin",
+  "items.ItemRendererMixin",
+  "render.InventoryScreenMixin",
+  "render.HandledScreenAccessor",
+  "render.MouseMixin"
+    ],
   "injectors": {
     "defaultRequire": 1
   }

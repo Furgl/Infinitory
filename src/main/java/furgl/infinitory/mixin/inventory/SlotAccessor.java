@@ -1,4 +1,4 @@
-package furgl.infinitory.interfaces;
+package furgl.infinitory.mixin.inventory;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
@@ -6,9 +6,9 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 import net.minecraft.screen.slot.Slot;
 
 @Mixin(Slot.class)
-public interface ISlotMixin {
+public interface SlotAccessor {
 
 	@Invoker
-	void onTake(int amount);
+	void callOnTake(int amount);
 	
 }

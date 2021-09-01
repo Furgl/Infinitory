@@ -1,5 +1,6 @@
-package furgl.infinitory.mixin;
+package furgl.infinitory.mixin.inventory;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Optional;
 import java.util.Set;
@@ -8,6 +9,7 @@ import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
@@ -15,8 +17,11 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import furgl.infinitory.interfaces.ISlotMixin;
-import furgl.infinitory.slots.InfinitorySlot;
+import com.google.common.collect.Lists;
+
+import furgl.infinitory.impl.inventory.IScreenHandler;
+import furgl.infinitory.impl.inventory.InfinitorySlot;
+import furgl.infinitory.utils.Utils;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.StackReference;
@@ -27,9 +32,19 @@ import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.ClickType;
 
 @Mixin(ScreenHandler.class)
-public abstract class ScreenHandlerMixin {
+public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandlerAccessor {
 
-	// FIXME Ctrl+Q outside inventory dropping full stack
+	/**Main inventory slots (slots */
+	@Unique
+	public ArrayList<InfinitorySlot> mainSlots = Lists.newArrayList();
+	@Unique
+	private boolean addedExtraSlots;
+	@Unique
+	public int scrollbarX;
+	@Unique
+	public int scrollbarMinY;
+	@Unique
+	public int scrollbarMaxY;
 
 	@Shadow
 	private int quickCraftButton;
@@ -43,9 +58,34 @@ public abstract class ScreenHandlerMixin {
 	@Shadow
 	protected abstract StackReference getCursorStackReference();
 
+	@Unique
+	@Override
+	public ArrayList<InfinitorySlot> getMainSlots() {
+		return this.mainSlots;
+	}
+	
+	@Unique
+	@Override
+	public int getScrollbarX() {
+		return this.scrollbarX;
+	}
+	
+	@Unique
+	@Override
+	public int getScrollbarMinY() {
+		return this.scrollbarMinY;
+	}
+	
+	@Unique
+	@Override
+	public int getScrollbarMaxY() {
+		return this.scrollbarMaxY;
+	}
+	
 	/**Copied entire method and edited by the comments because there are so many changes*/
 	@Inject(method = "internalOnSlotClick", at = @At(value = "INVOKE"), cancellable = true)
 	public void internalOnSlotClick(int slotIndex, int button, SlotActionType actionType, PlayerEntity player, CallbackInfo ci) {
+		//System.out.println("index: "+slotIndex+", actionType: "+actionType+", button: "+button); 
 		PlayerInventory playerInventory = player.getInventory();
 		Slot slot4;
 		ItemStack itemStack6;
@@ -130,6 +170,7 @@ public abstract class ScreenHandlerMixin {
 			this.endQuickCraft();
 		} else {
 			int v;
+			// normal clicks or shift-click
 			if ((actionType == SlotActionType.PICKUP || actionType == SlotActionType.QUICK_MOVE) && (button == 0 || button == 1)) {
 				ClickType clickType = button == 0 ? ClickType.LEFT : ClickType.RIGHT;
 				if (slotIndex == ScreenHandler.EMPTY_SPACE_SLOT_INDEX) {
@@ -140,11 +181,14 @@ public abstract class ScreenHandlerMixin {
 							ItemStack dropStack = cursorStack.split(Math.min(cursorStack.getCount(), cursorStack.getMaxCount()));
 							player.dropItem(dropStack, true);
 							//((ScreenHandler)(Object)this).setCursorStack(ItemStack.EMPTY);
-						} else {
+						} 
+						else {
 							player.dropItem(((ScreenHandler)(Object)this).getCursorStack().split(1), true);
 						}
 					}
-				} else if (actionType == SlotActionType.QUICK_MOVE) {
+				} 
+				// shift-click
+				else if (actionType == SlotActionType.QUICK_MOVE) {
 					if (slotIndex < 0) {
 						return;
 					}
@@ -152,45 +196,51 @@ public abstract class ScreenHandlerMixin {
 					slot4 = (Slot)((ScreenHandler)(Object)this).slots.get(slotIndex);
 					if (!slot4.canTakeItems(player)) {
 						return;
-					}
+					}						
 
-					for(itemStack6 = ((ScreenHandler)(Object)this).transferSlot(player, slotIndex); !itemStack6.isEmpty() && ItemStack.areItemsEqualIgnoreDamage(slot4.getStack(), itemStack6); itemStack6 = ((ScreenHandler)(Object)this).transferSlot(player, slotIndex)) {
+					for(itemStack6 = this.transferSlot(player, slotIndex); !itemStack6.isEmpty() && ItemStack.areItemsEqualIgnoreDamage(slot4.getStack(), itemStack6); itemStack6 = this.transferSlot(player, slotIndex)) {
 					}
-				} else {
+				} 
+				// normal click
+				else {
 					if (slotIndex < 0) {
 						return;
 					}
 
 					slot4 = (Slot)((ScreenHandler)(Object)this).slots.get(slotIndex);
 					itemStack6 = slot4.getStack();
-					ItemStack itemStack7 = ((ScreenHandler)(Object)this).getCursorStack();
-					player.onPickupSlotClick(itemStack7, slot4.getStack(), clickType);
-					if (!itemStack7.onStackClicked(slot4, clickType, player) && !itemStack6.onClicked(itemStack7, slot4, clickType, player, this.getCursorStackReference())) {
+					ItemStack cursorStack = ((ScreenHandler)(Object)this).getCursorStack();
+					player.onPickupSlotClick(cursorStack, slot4.getStack(), clickType); // just used for tutorial
+					if (!cursorStack.onStackClicked(slot4, clickType, player) && !itemStack6.onClicked(cursorStack, slot4, clickType, player, this.getCursorStackReference())) {
+						// empty slot
 						if (itemStack6.isEmpty()) {
-							if (!itemStack7.isEmpty()) {
-								v = clickType == ClickType.LEFT ? itemStack7.getCount() : 1;
-								((ScreenHandler)(Object)this).setCursorStack(slot4.insertStack(itemStack7, v));
+							if (!cursorStack.isEmpty()) {
+								v = clickType == ClickType.LEFT ? cursorStack.getCount() : 1;
+								((ScreenHandler)(Object)this).setCursorStack(slot4.insertStack(cursorStack, v));
 							}
-						} else if (slot4.canTakeItems(player)) {
-							if (itemStack7.isEmpty()) {
+						} 
+						else if (slot4.canTakeItems(player)) {
+							if (cursorStack.isEmpty()) {
 								v = clickType == ClickType.LEFT ? itemStack6.getCount() : (itemStack6.getCount() + 1) / 2;
 								Optional<ItemStack> optional = slot4.tryTakeStackRange(v, Integer.MAX_VALUE, player);
 								optional.ifPresent((stack) -> {
 									((ScreenHandler)(Object)this).setCursorStack(stack);
 									slot4.onTakeItem(player, stack);
 								});
-							} else if (slot4.canInsert(itemStack7)) {
-								if (ItemStack.canCombine(itemStack6, itemStack7)) {
-									v = clickType == ClickType.LEFT ? itemStack7.getCount() : 1;
-									((ScreenHandler)(Object)this).setCursorStack(slot4.insertStack(itemStack7, v));
-								} else if (itemStack7.getCount() <= slot4.getMaxItemCount(itemStack7)) {
-									slot4.setStack(itemStack7);
+							} 
+							else if (slot4.canInsert(cursorStack)) {
+								if (ItemStack.canCombine(itemStack6, cursorStack)) {
+									v = clickType == ClickType.LEFT ? cursorStack.getCount() : 1;
+									((ScreenHandler)(Object)this).setCursorStack(slot4.insertStack(cursorStack, v));
+								} else if (cursorStack.getCount() <= slot4.getMaxItemCount(cursorStack)) {
+									slot4.setStack(cursorStack);
 									((ScreenHandler)(Object)this).setCursorStack(itemStack6);
 								}
-							} else if (ItemStack.canCombine(itemStack6, itemStack7)) {
-								Optional<ItemStack> optional2 = slot4.tryTakeStackRange(itemStack6.getCount(), /*itemStack7.getMaxCount()*/Integer.MAX_VALUE - itemStack7.getCount(), player);
+							} 
+							else if (ItemStack.canCombine(itemStack6, cursorStack)) {
+								Optional<ItemStack> optional2 = slot4.tryTakeStackRange(itemStack6.getCount(), /*itemStack7.getMaxCount()*/Integer.MAX_VALUE - cursorStack.getCount(), player);
 								optional2.ifPresent((stack) -> {
-									itemStack7.increment(stack.getCount());
+									cursorStack.increment(stack.getCount());
 									slot4.onTakeItem(player, stack);
 								});
 							}
@@ -199,7 +249,8 @@ public abstract class ScreenHandlerMixin {
 
 					slot4.markDirty();
 				}
-			} else {
+			} 
+			else {
 				Slot slot5;
 				int u;
 				if (actionType == SlotActionType.SWAP) {
@@ -210,7 +261,7 @@ public abstract class ScreenHandlerMixin {
 						if (itemStack2.isEmpty()) {
 							if (slot5.canTakeItems(player)) {
 								playerInventory.setStack(button, itemStack6);
-								((ISlotMixin)slot5).onTake(itemStack6.getCount());
+								((SlotAccessor)slot5).callOnTake(itemStack6.getCount());
 								slot5.setStack(ItemStack.EMPTY);
 								slot5.onTakeItem(player, itemStack6);
 							}
@@ -282,12 +333,13 @@ public abstract class ScreenHandlerMixin {
 
 	@Redirect(method = "insertItem", at = @At(value = "INVOKE", target = "Lnet/minecraft/item/ItemStack;getMaxCount()I"))
 	public int getMaxCountInsertItem(ItemStack stack) {
-		return stack.getMaxCount();
+		// if this is MAX_VALUE, can transfer to other inventories with infinite stacks
+		// FIXME if this is max count, transferring to player inventory will not stack with infinite stacks
+		return stack.getMaxCount(); 
 	}
 
 	@Inject(method = "canInsertItemIntoSlot", at = @At(value = "INVOKE", target = "Lnet/minecraft/item/ItemStack;getMaxCount()I"), cancellable = true)
-	private static void getMaxCountCanInsertItemIntoSlot(@Nullable Slot slot, ItemStack stack, boolean allowOverflow,
-			CallbackInfoReturnable<Boolean> ci) {
+	private static void getMaxCountCanInsertItemIntoSlot(@Nullable Slot slot, ItemStack stack, boolean allowOverflow, CallbackInfoReturnable<Boolean> ci) {
 		if (slot instanceof InfinitorySlot)
 			ci.setReturnValue(slot.getStack().getCount() + (allowOverflow ? 0 : stack.getCount()) <= Integer.MAX_VALUE);
 		else
@@ -297,10 +349,35 @@ public abstract class ScreenHandlerMixin {
 	/**Replace player slots in containers (not player inventory - that's handled in PlayerScreenHandlerMixin*/
 	@ModifyVariable(method = "addSlot", at = @At(value = "HEAD"), ordinal = 0)
 	public Slot changeSlot(Slot slot) {
-		if (slot.inventory instanceof PlayerInventory) 
-			return new InfinitorySlot(slot.inventory, slot.getIndex(), slot.x, slot.y, slot.getBackgroundSprite());
-		else 
+		if (slot.inventory instanceof PlayerInventory && !(slot instanceof InfinitorySlot)) {
+			// add extra slots
+			if (!this.addedExtraSlots && slot.getIndex() == 27) {
+				for (int i=0; i<Utils.ADDITIONAL_SLOTS; ++i)
+					this.callAddSlot(new InfinitorySlot(slot.inventory, 41+i, slot.x + (i % 9) * 18, slot.y + (i / 9 + 1) * 18, slot.getBackgroundSprite()));
+				this.scrollbarX = slot.x + 170;
+				this.scrollbarMinY = slot.y - 36;
+				this.scrollbarMaxY = slot.y + 18;
+				this.addedExtraSlots = true;
+			}
+			// create new InfinitorySlot
+			InfinitorySlot newSlot = new InfinitorySlot(slot.inventory, slot.getIndex(), slot.x, slot.y, slot.getBackgroundSprite());
+			// if this is in the main inventory, add to mainSlots
+			if (newSlot.getIndex() > 8 && newSlot.getIndex() < 36)
+				this.mainSlots.add(newSlot);
+			return newSlot;
+		}
+		else {
+			// adding additional slots above - add to mainSlots
+			if (slot instanceof InfinitorySlot)
+				this.mainSlots.add((InfinitorySlot) slot);
 			return slot;
+		}
+	}
+
+	/**Use this method instead of {@link ScreenHandler#transferSlot(PlayerEntity, int)}*/
+	@Unique
+	protected ItemStack transferSlot(PlayerEntity player, int slotIndex) {
+		return ((ScreenHandler)(Object)this).transferSlot(player, slotIndex);
 	}
 
 }
