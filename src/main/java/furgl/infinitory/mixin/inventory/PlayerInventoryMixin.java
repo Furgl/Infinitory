@@ -44,7 +44,6 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 	public void constructor(CallbackInfo ci) {
 		this.infinitory = DefaultedList.ofSize(Utils.ADDITIONAL_SLOTS, ItemStack.EMPTY);
 		this.combinedInventory = ImmutableList.of(this.main, this.armor, this.offHand, this.infinitory);
-		//InfinitorySlot.mainSlots.clear();
 	}
 
 	@Override

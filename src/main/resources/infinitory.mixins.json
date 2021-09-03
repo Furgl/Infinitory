@@ -9,14 +9,15 @@
   "inventory.ScreenHandlerAccessor",
   "inventory.ScreenHandlerMixin",
   "inventory.SlotAccessor",
+    "inventory.SlotMixin",
   "items.ItemStackMixin",
-  "PacketByteBufMixin",
-  "inventory.SlotMixin"
+  "network.PacketByteBufMixin",
+  "network.ServerPlayNetworkHandlerMixin"
       ],
   "client": [
   "render.HandledScreenMixin",
   "items.ItemRendererMixin",
-  "render.InventoryScreenMixin",
+  "render.CreativeInventoryScreenMixin",
   "render.HandledScreenAccessor",
   "render.MouseMixin"
     ],

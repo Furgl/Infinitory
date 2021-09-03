@@ -22,7 +22,7 @@ public abstract class PlayerScreenHandlerMixin extends ScreenHandlerMixin implem
 
 	/**Use this method instead of {@link ScreenHandler#transferSlot(PlayerEntity, int)}
 	 * Mostly copied from original method, but modified to support more slots
-	 * Slots:
+	 * Slot indexes:
 	 *   0 = crafting output
 	 *   1-4 = crafting input
 	 *   5-8 = armor
@@ -37,6 +37,7 @@ public abstract class PlayerScreenHandlerMixin extends ScreenHandlerMixin implem
 	 *   36-39 = armor
 	 *   9-35 = main inventory
 	 *   40 = offhand
+	 *   >40 = infinitory
 	 */
 	@Unique
 	@Override

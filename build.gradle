@@ -30,6 +30,10 @@ dependencies {
 	// You may need to force-disable transitiveness on them.
 }
 
+loom {
+	accessWidener = file("src/main/resources/infinitory.accesswidener")
+}
+
 processResources {
 	inputs.property "version", project.version
 

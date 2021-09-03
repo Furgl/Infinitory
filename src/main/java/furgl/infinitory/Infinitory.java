@@ -6,7 +6,6 @@ import net.fabricmc.api.ModInitializer;
 public class Infinitory implements ModInitializer {
 	
 	// TEST on dedicated server
-	// TEST creative inventory
 	// TODO what happens when player dies?
 
 	public static final String MODNAME = "Infinitory";

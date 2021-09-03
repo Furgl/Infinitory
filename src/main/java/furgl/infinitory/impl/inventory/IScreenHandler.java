@@ -1,10 +1,14 @@
 package furgl.infinitory.impl.inventory;
 
-import java.util.ArrayList;
+import java.util.HashMap;
 
 public interface IScreenHandler {
 
-	public ArrayList<InfinitorySlot> getMainSlots();
+	public void addExtraSlots();
+	
+	public HashMap<Integer, InfinitorySlot> getMainSlots();
+	
+	public void clearMainSlots();
 	
 	public int getScrollbarX();
 	

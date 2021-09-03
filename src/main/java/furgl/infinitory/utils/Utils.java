@@ -6,7 +6,7 @@ import java.math.RoundingMode;
 public class Utils {
 	
 	/**Additional slots - must be multiple of 9*/
-	public static final int ADDITIONAL_SLOTS = 18;
+	public static final int ADDITIONAL_SLOTS = 27;
 
 	/** Gets String from double without trailing zeroes */ 
 	public static String formatDouble(double num, int decimalPlaces) {

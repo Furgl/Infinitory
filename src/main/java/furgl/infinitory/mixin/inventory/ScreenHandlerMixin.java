@@ -1,6 +1,6 @@
 package furgl.infinitory.mixin.inventory;
 
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Optional;
 import java.util.Set;
@@ -8,20 +8,22 @@ import java.util.Set;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 import furgl.infinitory.impl.inventory.IScreenHandler;
+import furgl.infinitory.impl.inventory.InfinitoryDefaultedList;
 import furgl.infinitory.impl.inventory.InfinitorySlot;
 import furgl.infinitory.utils.Utils;
+import net.minecraft.client.gui.screen.ingame.CreativeInventoryScreen.CreativeScreenHandler;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.StackReference;
@@ -30,13 +32,14 @@ import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.ClickType;
+import net.minecraft.util.collection.DefaultedList;
 
 @Mixin(ScreenHandler.class)
 public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandlerAccessor {
 
-	/**Main inventory slots (slots */
+	/**Main inventory slots*/
 	@Unique
-	public ArrayList<InfinitorySlot> mainSlots = Lists.newArrayList();
+	public HashMap<Integer, InfinitorySlot> mainSlots = Maps.newHashMap();
 	@Unique
 	private boolean addedExtraSlots;
 	@Unique
@@ -52,40 +55,69 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 	private int quickCraftStage;
 	@Shadow @Final
 	private Set<Slot> quickCraftSlots;
+	/**Replace slots with our version that listens to added slots*/
+	@Shadow @Final @Mutable
+	public DefaultedList<Slot> slots = InfinitoryDefaultedList.of(this);
 
 	@Shadow
 	protected abstract void endQuickCraft();
 	@Shadow
 	protected abstract StackReference getCursorStackReference();
-
+	
 	@Unique
 	@Override
-	public ArrayList<InfinitorySlot> getMainSlots() {
+	public HashMap<Integer, InfinitorySlot> getMainSlots() {
 		return this.mainSlots;
 	}
 	
 	@Unique
 	@Override
+	public void clearMainSlots() {
+		this.mainSlots.clear();
+		this.addedExtraSlots = false;
+	}
+
+	@Unique
+	@Override
 	public int getScrollbarX() {
 		return this.scrollbarX;
 	}
-	
+
 	@Unique
 	@Override
 	public int getScrollbarMinY() {
 		return this.scrollbarMinY;
 	}
-	
+
 	@Unique
 	@Override
 	public int getScrollbarMaxY() {
 		return this.scrollbarMaxY;
 	}
-	
+
+	@Unique
+	@Override
+	public void addExtraSlots() { 
+		// add extra slots
+		if (!this.addedExtraSlots && this.mainSlots.size() == 27) {
+			Slot slot = this.mainSlots.entrySet().iterator().next().getValue(); // get first slot
+			for (int i=0; i<Utils.ADDITIONAL_SLOTS; ++i) { // is this the correct id to use? does it matter?
+				InfinitorySlot newSlot = new InfinitorySlot(slot, slot.id+37+i, 41+i, slot.x + (i % 9) * 18, slot.y + (i / 9 + 3) * 18, slot.getBackgroundSprite());
+				if ((Object)this instanceof CreativeScreenHandler) 
+					((ScreenHandler)(Object)this).slots.add(newSlot); // creative slots don't call addSlot() when added (they're just wrapped in CreativeSlot)
+				else 
+					this.callAddSlot(newSlot); // THIS NEEDS TO HAPPEN AFTER ALL VANILLA SLOTS ARE ADDED OR ELSE ID -> SLOT GETS MIXED UP
+			}
+			this.scrollbarX = slot.x + 170;
+			this.scrollbarMinY = slot.y;
+			this.scrollbarMaxY = slot.y + 54;
+			this.addedExtraSlots = true;
+		}
+	}
+
 	/**Copied entire method and edited by the comments because there are so many changes*/
 	@Inject(method = "internalOnSlotClick", at = @At(value = "INVOKE"), cancellable = true)
 	public void internalOnSlotClick(int slotIndex, int button, SlotActionType actionType, PlayerEntity player, CallbackInfo ci) {
-		//System.out.println("index: "+slotIndex+", actionType: "+actionType+", button: "+button); 
 		PlayerInventory playerInventory = player.getInventory();
 		Slot slot4;
 		ItemStack itemStack6;
@@ -344,34 +376,6 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 			ci.setReturnValue(slot.getStack().getCount() + (allowOverflow ? 0 : stack.getCount()) <= Integer.MAX_VALUE);
 		else
 			ci.setReturnValue(slot.getStack().getCount() + (allowOverflow ? 0 : stack.getCount()) <= stack.getMaxCount());
-	}
-
-	/**Replace player slots in containers (not player inventory - that's handled in PlayerScreenHandlerMixin*/
-	@ModifyVariable(method = "addSlot", at = @At(value = "HEAD"), ordinal = 0)
-	public Slot changeSlot(Slot slot) {
-		if (slot.inventory instanceof PlayerInventory && !(slot instanceof InfinitorySlot)) {
-			// add extra slots
-			if (!this.addedExtraSlots && slot.getIndex() == 27) {
-				for (int i=0; i<Utils.ADDITIONAL_SLOTS; ++i)
-					this.callAddSlot(new InfinitorySlot(slot.inventory, 41+i, slot.x + (i % 9) * 18, slot.y + (i / 9 + 1) * 18, slot.getBackgroundSprite()));
-				this.scrollbarX = slot.x + 170;
-				this.scrollbarMinY = slot.y - 36;
-				this.scrollbarMaxY = slot.y + 18;
-				this.addedExtraSlots = true;
-			}
-			// create new InfinitorySlot
-			InfinitorySlot newSlot = new InfinitorySlot(slot.inventory, slot.getIndex(), slot.x, slot.y, slot.getBackgroundSprite());
-			// if this is in the main inventory, add to mainSlots
-			if (newSlot.getIndex() > 8 && newSlot.getIndex() < 36)
-				this.mainSlots.add(newSlot);
-			return newSlot;
-		}
-		else {
-			// adding additional slots above - add to mainSlots
-			if (slot instanceof InfinitorySlot)
-				this.mainSlots.add((InfinitorySlot) slot);
-			return slot;
-		}
 	}
 
 	/**Use this method instead of {@link ScreenHandler#transferSlot(PlayerEntity, int)}*/
