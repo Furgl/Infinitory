@@ -12,7 +12,7 @@ public abstract class ServerPlayNetworkHandlerMixin {
 	
 	@ModifyConstant(method = "onCreativeInventoryAction", constant = @Constant(intValue = 45))
 	public int increaseMaxSlots(int maxSlot) {
-		return Integer.MAX_VALUE;
+		return maxSlot + Integer.MAX_VALUE;
 	}
 	
 	@ModifyConstant(method = "onCreativeInventoryAction", constant = @Constant(intValue = 64))

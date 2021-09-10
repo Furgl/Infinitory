@@ -21,8 +21,8 @@ import com.google.common.collect.Maps;
 
 import furgl.infinitory.config.Config;
 import furgl.infinitory.impl.inventory.IScreenHandler;
+import furgl.infinitory.impl.inventory.InfinitoryDefaultedList;
 import furgl.infinitory.impl.inventory.InfinitorySlot;
-import furgl.infinitory.impl.lists.SlotDefaultedList;
 import furgl.infinitory.utils.Utils;
 import net.minecraft.client.gui.screen.ingame.CreativeInventoryScreen.CreativeScreenHandler;
 import net.minecraft.entity.player.PlayerEntity;
@@ -58,7 +58,7 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 	private Set<Slot> quickCraftSlots;
 	/**Replace slots with our version that listens to added slots*/
 	@Shadow @Final @Mutable
-	public DefaultedList<Slot> slots = SlotDefaultedList.of(this);
+	public DefaultedList<Slot> slots = InfinitoryDefaultedList.of(this);
 
 	@Shadow
 	protected abstract void endQuickCraft();

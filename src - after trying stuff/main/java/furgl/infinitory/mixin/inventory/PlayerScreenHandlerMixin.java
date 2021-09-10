@@ -83,8 +83,8 @@ public abstract class PlayerScreenHandlerMixin extends ScreenHandlerMixin implem
 			} 
 			// hotbar -> main inventory
 			else if (index >= 36 && index < 45) {
-				if (!this.callInsertItem(itemStack2, 9, 36, false) && 
-						(Utils.getAdditionalSlots(player) > 0 && !this.callInsertItem(itemStack2, 45, 45+Utils.getAdditionalSlots(player), false))) 
+				if (!this.callInsertItem(itemStack2, 9, 36, false) || 
+						(Utils.getAdditionalSlots(player) > 0 && !this.callInsertItem(itemStack2, 46, 46+Utils.getAdditionalSlots(player), false))) 
 					return ItemStack.EMPTY;
 			} 
 			// anywhere -> anywhere

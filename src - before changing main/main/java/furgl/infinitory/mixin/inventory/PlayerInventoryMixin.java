@@ -17,7 +17,6 @@ import com.google.common.collect.ImmutableList;
 
 import furgl.infinitory.config.Config;
 import furgl.infinitory.impl.inventory.IPlayerInventory;
-import furgl.infinitory.impl.lists.MainDefaultedList;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
@@ -31,24 +30,24 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 
 	/**Infinitory's extra inventory slots*/
 	@Unique
-	private DefaultedList<ItemStack> infinitory; 
-
+	private DefaultedList<ItemStack> infinitory; // TEST why use separate list instead of expanding main? TODO try expanding main instead?
+	// current issues: can't shift-click or pick up items to go into expanded inventory
+	
 	@Shadow @Final @Mutable
 	public DefaultedList<ItemStack> main;
-	@Shadow @Final
+	@Shadow @Final @Mutable
 	public DefaultedList<ItemStack> armor;
-	@Shadow @Final
+	@Shadow @Final @Mutable
 	public DefaultedList<ItemStack> offHand;
 	@Shadow @Final @Mutable
 	private List<DefaultedList<ItemStack>> combinedInventory;
 
 	@Inject(method = "<init>", at = @At("TAIL"))
 	public void constructor(CallbackInfo ci) {
-		this.main = MainDefaultedList.ofSize(36, ItemStack.EMPTY, this);
 		this.infinitory = DefaultedList.ofSize(getAdditionalSlots(), ItemStack.EMPTY);
 		this.combinedInventory = ImmutableList.of(this.main, this.armor, this.offHand, this.infinitory);
 	}
-
+	
 	@Unique
 	@Override
 	public int getAdditionalSlots() {
@@ -61,33 +60,10 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 		return Config.maxStackSize;
 	}
 
-	/**Have getOccupiedSlotWithRoomForStack check infinitory if it can't find a slot in main*/
-	@Inject(method = "getOccupiedSlotWithRoomForStack", at = @At("RETURN"), cancellable = true)
-	public void getOccupiedSlotWithRoomForStack(ItemStack stack, CallbackInfoReturnable<Integer> ci) {
-		if (ci.getReturnValue() == -1) 
-			for(int i = 0; i < this.infinitory.size(); ++i) 
-				if (this.canStackAddMore((ItemStack)this.infinitory.get(i), stack)) 
-					ci.setReturnValue(this.main.size() + 5 + i);
-	}
-
-	/**Have getEmptySlot check infinitory if it can't find an empty slot in main*/
-	@Inject(method = "getEmptySlot", at = @At("RETURN"), cancellable = true)
-	public void getEmptySlot(CallbackInfoReturnable<Integer> ci) {
-		if (ci.getReturnValue() == -1) 
-			for(int i = this.infinitory.size()-1; i >= 0 && i < this.infinitory.size(); --i) 
-				if (((ItemStack)this.infinitory.get(i)).isEmpty()) 
-					ci.setReturnValue(this.main.size() + 5 + i);
-	}
-
 	/**Remove a lot of restrictions on adding more to stack*/
 	@Inject(method = "canStackAddMore", at = @At("RETURN"), cancellable = true)
 	public void canStackAddMore(ItemStack existingStack, ItemStack stack, CallbackInfoReturnable<Boolean> ci) {
-		ci.setReturnValue(canStackAddMore(existingStack, stack));
-	}
-
-	@Unique
-	private boolean canStackAddMore(ItemStack existingStack, ItemStack stack) {
-		return !existingStack.isEmpty() && ItemStack.canCombine(existingStack, stack);
+		ci.setReturnValue(!existingStack.isEmpty() && ItemStack.canCombine(existingStack, stack));
 	}
 
 	/**Restrict Ctrl+Q outside of inventory to max stack size*/
@@ -157,7 +133,7 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 			}
 		}
 	}
-
+	
 	@Override
 	public DefaultedList<ItemStack> getInfinitory() {
 		return this.infinitory;

@@ -17,43 +17,70 @@ import com.google.common.collect.ImmutableList;
 
 import furgl.infinitory.config.Config;
 import furgl.infinitory.impl.inventory.IPlayerInventory;
-import furgl.infinitory.impl.lists.MainDefaultedList;
+import furgl.infinitory.impl.inventory.ISlot;
+import furgl.infinitory.impl.misc.MainDefaultedList;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
+import net.minecraft.screen.slot.Slot;
 import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.math.MathHelper;
 
 @Mixin(PlayerInventory.class)
 public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventory {
 
-	/**Infinitory's extra inventory slots*/
-	@Unique
-	private DefaultedList<ItemStack> infinitory; 
-
+	/**Infinitory's extra inventory slots are tacked onto main*/
 	@Shadow @Final @Mutable
 	public DefaultedList<ItemStack> main;
-	@Shadow @Final
+	@Shadow @Final @Mutable
 	public DefaultedList<ItemStack> armor;
-	@Shadow @Final
+	@Shadow @Final @Mutable
 	public DefaultedList<ItemStack> offHand;
 	@Shadow @Final @Mutable
 	private List<DefaultedList<ItemStack>> combinedInventory;
+	
+	@Unique
+	private PlayerEntity player;
 
+	/**Change main to be MainDefaultedList that is not fixed size*/
 	@Inject(method = "<init>", at = @At("TAIL"))
-	public void constructor(CallbackInfo ci) {
-		this.main = MainDefaultedList.ofSize(36, ItemStack.EMPTY, this);
-		this.infinitory = DefaultedList.ofSize(getAdditionalSlots(), ItemStack.EMPTY);
-		this.combinedInventory = ImmutableList.of(this.main, this.armor, this.offHand, this.infinitory);
+	public void constructor(PlayerEntity player, CallbackInfo ci) {
+		this.player = player;
+		this.main = MainDefaultedList.ofSize(36, ItemStack.EMPTY); 
+		this.combinedInventory = ImmutableList.of(this.main, this.armor, this.offHand);
 	}
 
 	@Unique
 	@Override
 	public int getAdditionalSlots() {
-		int additionalSlots = 30;
+		int additionalSlots = 9;
 		return MathHelper.clamp(additionalSlots - additionalSlots % 9, 0, Config.maxExtraSlots);
+	}
+
+	/**Keep main size updated with additional slots*/
+	@Inject(method = "updateItems", at = @At("RETURN"))
+	public void updateItems(CallbackInfo ci) {
+		int difference = PlayerInventory.MAIN_SIZE+this.getAdditionalSlots() - this.main.size();
+		if (difference != 0) {
+			// increase size of main
+			for (int i=0; i<difference; ++i)
+				this.main.add(ItemStack.EMPTY);
+			// update indexes of slots pointing to indexes > 36
+			if (this.player.playerScreenHandler != null) {
+				for (int i=36; i<this.player.playerScreenHandler.slots.size(); ++i) {
+					Slot slot = this.player.playerScreenHandler.getSlot(i);
+					//slot.id += difference;
+					//if (slot instanceof ISlot)
+					//	((ISlot)slot).setIndex(slot.getIndex()+difference);
+				}
+			}
+		}
+
+		// TODO remove
+		//\System.out.println(this.combinedInventory);
 	}
 
 	@Override
@@ -61,33 +88,10 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 		return Config.maxStackSize;
 	}
 
-	/**Have getOccupiedSlotWithRoomForStack check infinitory if it can't find a slot in main*/
-	@Inject(method = "getOccupiedSlotWithRoomForStack", at = @At("RETURN"), cancellable = true)
-	public void getOccupiedSlotWithRoomForStack(ItemStack stack, CallbackInfoReturnable<Integer> ci) {
-		if (ci.getReturnValue() == -1) 
-			for(int i = 0; i < this.infinitory.size(); ++i) 
-				if (this.canStackAddMore((ItemStack)this.infinitory.get(i), stack)) 
-					ci.setReturnValue(this.main.size() + 5 + i);
-	}
-
-	/**Have getEmptySlot check infinitory if it can't find an empty slot in main*/
-	@Inject(method = "getEmptySlot", at = @At("RETURN"), cancellable = true)
-	public void getEmptySlot(CallbackInfoReturnable<Integer> ci) {
-		if (ci.getReturnValue() == -1) 
-			for(int i = this.infinitory.size()-1; i >= 0 && i < this.infinitory.size(); --i) 
-				if (((ItemStack)this.infinitory.get(i)).isEmpty()) 
-					ci.setReturnValue(this.main.size() + 5 + i);
-	}
-
 	/**Remove a lot of restrictions on adding more to stack*/
 	@Inject(method = "canStackAddMore", at = @At("RETURN"), cancellable = true)
 	public void canStackAddMore(ItemStack existingStack, ItemStack stack, CallbackInfoReturnable<Boolean> ci) {
-		ci.setReturnValue(canStackAddMore(existingStack, stack));
-	}
-
-	@Unique
-	private boolean canStackAddMore(ItemStack existingStack, ItemStack stack) {
-		return !existingStack.isEmpty() && ItemStack.canCombine(existingStack, stack);
+		ci.setReturnValue(!existingStack.isEmpty() && ItemStack.canCombine(existingStack, stack));
 	}
 
 	/**Restrict Ctrl+Q outside of inventory to max stack size*/
@@ -106,35 +110,10 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 		return Config.maxStackSize;
 	}
 
-	/**Include infinitory in size*/
-	@Inject(method = "size", at = @At("RETURN"), cancellable = true)
-	public void size(CallbackInfoReturnable<Integer> ci) {
-		ci.setReturnValue(ci.getReturnValue() + this.infinitory.size());
-	}
-
-	/**Include infinitory in isEmpty check*/
-	@Inject(method = "isEmpty", at = @At("RETURN"), cancellable = true)
-	public void isEmpty(CallbackInfoReturnable<Boolean> ci) {
-		ci.setReturnValue(ci.getReturnValue() && this.infinitory.isEmpty());
-	}
-
-	/**Include infinitory in indexOf*/
-	@Inject(method = "indexOf", at = @At("RETURN"), cancellable = true)
-	public void indexOf(ItemStack stack, CallbackInfoReturnable<Integer> ci) {
-		if (ci.getReturnValue() == -1) {
-			for(int i = 0; i < this.infinitory.size(); ++i) {
-				ItemStack itemStack = (ItemStack)this.infinitory.get(i);
-				if (!((ItemStack)this.infinitory.get(i)).isEmpty() && ItemStack.canCombine(stack, (ItemStack)this.infinitory.get(i)) && !((ItemStack)this.infinitory.get(i)).isDamaged() && !itemStack.hasEnchantments() && !itemStack.hasCustomName()) 
-					ci.setReturnValue(i);
-			}
-		}
-	}
-
 	@Inject(method = "readNbt", at = @At("RETURN"))
 	public void readNbt(NbtList nbtList, CallbackInfo ci) {
-		this.infinitory.clear();
-
-		for(int i = 0; i < nbtList.size(); ++i) {
+		// TODO make nbt work for expanded main
+		/*for(int i = 0; i < nbtList.size(); ++i) {
 			NbtCompound nbtCompound = nbtList.getCompound(i);
 			if (nbtCompound.contains("InfinitorySlot")) {
 				int slot = nbtCompound.getInt("InfinitorySlot");
@@ -142,12 +121,12 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 				if (!itemStack.isEmpty() && slot >= 0 && slot < this.infinitory.size()) 
 					this.infinitory.set(slot, itemStack);
 			}
-		}
+		}*/
 	}
 
 	@Inject(method = "writeNbt", at = @At("RETURN"))
 	public void writeNbt(NbtList nbtList, CallbackInfoReturnable<NbtCompound> ci) {
-		for(int i = 0; i < this.infinitory.size(); ++i) {
+		/*for(int i = 0; i < this.infinitory.size(); ++i) {
 			if (!((ItemStack)this.infinitory.get(i)).isEmpty()) {
 				NbtCompound nbt = new NbtCompound();
 				nbt.putByte("Slot", (byte) 250); // put in a slot value that won't be read by vanilla
@@ -155,12 +134,7 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 				((ItemStack)this.infinitory.get(i)).writeNbt(nbt);
 				nbtList.add(nbt);
 			}
-		}
-	}
-
-	@Override
-	public DefaultedList<ItemStack> getInfinitory() {
-		return this.infinitory;
+		}*/
 	}
 
 }

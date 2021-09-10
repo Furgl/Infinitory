@@ -22,7 +22,7 @@ import com.google.common.collect.Maps;
 import furgl.infinitory.config.Config;
 import furgl.infinitory.impl.inventory.IScreenHandler;
 import furgl.infinitory.impl.inventory.InfinitorySlot;
-import furgl.infinitory.impl.lists.SlotDefaultedList;
+import furgl.infinitory.impl.misc.SlotsDefaultedList;
 import furgl.infinitory.utils.Utils;
 import net.minecraft.client.gui.screen.ingame.CreativeInventoryScreen.CreativeScreenHandler;
 import net.minecraft.entity.player.PlayerEntity;
@@ -58,19 +58,19 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 	private Set<Slot> quickCraftSlots;
 	/**Replace slots with our version that listens to added slots*/
 	@Shadow @Final @Mutable
-	public DefaultedList<Slot> slots = SlotDefaultedList.of(this);
+	public DefaultedList<Slot> slots = SlotsDefaultedList.of(this);
 
 	@Shadow
 	protected abstract void endQuickCraft();
 	@Shadow
 	protected abstract StackReference getCursorStackReference();
-	
+
 	@Unique
 	@Override
 	public HashMap<Integer, InfinitorySlot> getMainSlots() {
 		return this.mainSlots;
 	}
-	
+
 	@Unique
 	@Override
 	public void clearMainSlots() {
@@ -119,6 +119,11 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 	/**Copied entire method and edited by the comments because there are so many changes*/
 	@Inject(method = "internalOnSlotClick", at = @At(value = "INVOKE"), cancellable = true)
 	public void internalOnSlotClick(int slotIndex, int button, SlotActionType actionType, PlayerEntity player, CallbackInfo ci) {
+		if (slotIndex >= 0 && slotIndex < ((ScreenHandler)(Object)this).slots.size()) {
+			Slot slot99 = (Slot)((ScreenHandler)(Object)this).slots.get(slotIndex);
+			ItemStack stack99 = slot99.getStack();
+			System.out.println("index: "+slotIndex+", stack: "+stack99); // TODO remove
+		}
 		PlayerInventory playerInventory = player.getInventory();
 		Slot slot4;
 		ItemStack itemStack6;
