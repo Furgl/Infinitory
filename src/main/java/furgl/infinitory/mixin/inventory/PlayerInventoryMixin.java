@@ -38,6 +38,8 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 	private int additionalSlots;
 	@Unique
 	private boolean needToUpdateInfinitorySize;
+	@Unique
+	private boolean needToUpdateClient;
 
 	@Shadow @Final @Mutable
 	public DefaultedList<ItemStack> main;
@@ -59,26 +61,26 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 	/**Update main and infinitory full/empty status*/
 	@Unique
 	public void updateFullEmptyStatus() {
-		System.out.println(((PlayerInventory)(Object)this).player.currentScreenHandler.getCursorStack()); // TODO remove
+		//System.out.println(((PlayerInventory)(Object)this).player.currentScreenHandler.getCursorStack()); // TODO remove
 		/*if (((PlayerInventory)(Object)this).player.currentScreenHandler != null && 
 				((PlayerInventory)(Object)this).player.currentScreenHandler.getCursorStack().isEmpty()) {*/
-			boolean updateInfinitorySize = false;
-			for (ListeningDefaultedList list : new ListeningDefaultedList[] {(ListeningDefaultedList) this.main, this.infinitory}) {
-				list.isEmpty = true;
-				list.isFull = true;
-				for (int i=list instanceof MainDefaultedList ? 9 : 0; i<list.size(); ++i) {
-					ItemStack stack = list.get(i);
-					if (stack.isEmpty())
-						list.isFull = false;
-					else 
-						list.isEmpty = false;
-				}
-				System.out.println(list.getClass()+", isEmpty: "+list.isEmpty+", isFull: "+list.isFull+", "+list); // TODO remove
-				updateInfinitorySize = true;
+		boolean updateInfinitorySize = false;
+		for (ListeningDefaultedList list : new ListeningDefaultedList[] {(ListeningDefaultedList) this.main, this.infinitory}) {
+			list.isEmpty = true;
+			list.isFull = true;
+			for (int i=list instanceof MainDefaultedList ? 9 : 0; i<list.size(); ++i) {
+				ItemStack stack = list.get(i);
+				if (stack.isEmpty())
+					list.isFull = false;
+				else 
+					list.isEmpty = false;
 			}
-			// if status changed, update infinitory size
-			if (updateInfinitorySize)
-				this.updateInfinitorySize();
+			//System.out.println(list.getClass()+", isEmpty: "+list.isEmpty+", isFull: "+list.isFull+", "+list); // TODO remove
+			updateInfinitorySize = true;
+		}
+		// if status changed, update infinitory size
+		if (updateInfinitorySize)
+			this.updateInfinitorySize();
 		//}
 	}
 
@@ -124,9 +126,15 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 
 	@Inject(method = "updateItems", at = @At("TAIL"))
 	public void updateItems(CallbackInfo ci) {
+		// update infinitory size
 		if (this.needToUpdateInfinitorySize) {
 			this.updateFullEmptyStatus();
 			this.needToUpdateInfinitorySize = false;
+		}
+		// update client
+		if (this.needToUpdateClient && ((PlayerInventory)(Object)this).player.age > 10) {
+			((PlayerInventory)(Object)this).player.playerScreenHandler.updateToClient();
+			this.needToUpdateClient = false;
 		}
 	}
 
@@ -249,12 +257,15 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 			if (nbtCompound.contains("InfinitorySlot")) {
 				int slot = nbtCompound.getInt("InfinitorySlot");
 				ItemStack itemStack = ItemStack.fromNbt(nbtCompound);
-				while (slot > this.infinitory.size() && this.infinitory.size() < Config.maxExtraSlots)
+				while (slot > this.infinitory.size()-1 && this.infinitory.size() < Config.maxExtraSlots) 
 					this.infinitory.add(ItemStack.EMPTY);
 				if (!itemStack.isEmpty() && slot >= 0 && slot < this.infinitory.size()) 
 					this.infinitory.set(slot, itemStack);
 			}
 		}
+
+		// for some reason this desyncs from client with expandable inventory, so we need to update client
+		this.needToUpdateClient = true;
 	}
 
 	@Inject(method = "writeNbt", at = @At("RETURN"))
