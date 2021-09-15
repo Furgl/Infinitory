@@ -7,23 +7,19 @@ import org.apache.commons.lang3.Validate;
 
 import furgl.infinitory.impl.inventory.IPlayerInventory;
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.collection.DefaultedList;
 
 /**Same as DefaultedList, except tries to add to PlayerInventory#infinitory if index is higher than size*/
-public class MainDefaultedList extends DefaultedList<ItemStack> {
+public class MainDefaultedList extends ListeningDefaultedList {
 
-	private IPlayerInventory playerInventory;
-	
 	public static MainDefaultedList ofSize(int size, ItemStack defaultValue, IPlayerInventory playerInventory) {
 		Validate.notNull(defaultValue);
-	      Object[] objects = new Object[size];
-	      Arrays.fill(objects, defaultValue);
-	      return new MainDefaultedList(Arrays.asList(objects), defaultValue, playerInventory);
+		ItemStack[] objects = new ItemStack[size];
+		Arrays.fill(objects, defaultValue);
+		return new MainDefaultedList(Arrays.asList(objects), defaultValue, playerInventory);
 	}
-	
-	protected MainDefaultedList(List delegate, ItemStack initialSlot, IPlayerInventory playerInventory) {
-		super(delegate, initialSlot);
-		this.playerInventory = playerInventory;
+
+	protected MainDefaultedList(List<ItemStack> delegate, ItemStack initialSlot, IPlayerInventory playerInventory) {
+		super(delegate, initialSlot, playerInventory);
 	}
 
 	@Override
@@ -33,5 +29,5 @@ public class MainDefaultedList extends DefaultedList<ItemStack> {
 		else
 			super.add(index, element);
 	}
-	
+
 }

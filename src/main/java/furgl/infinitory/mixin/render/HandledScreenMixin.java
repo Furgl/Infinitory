@@ -58,6 +58,8 @@ public abstract class HandledScreenMixin<T extends ScreenHandler> extends Screen
 	private boolean scrolling;
 	@Unique
 	private PlayerInventory playerInventory;
+	@Unique
+	private int prevMainSlotsSize;
 
 	protected HandledScreenMixin(Text title) {
 		super(title);
@@ -222,9 +224,12 @@ public abstract class HandledScreenMixin<T extends ScreenHandler> extends Screen
 	}
 	
 	@Inject(method = "tick", at = @At("HEAD"))
-	public void tick(CallbackInfo ci) { // will not work bc this is only called clientside!!!
-		//if ((Object) this.handler instanceof IScreenHandler)
-			//((IScreenHandler)this.handler).addExtraSlots();
+	public void tick(CallbackInfo ci) { 
+		// scroll items when slot size changes
+		if (this.prevMainSlotsSize != this.getMainSlots().size()) {
+			this.onMouseScroll(0, 0, this.prevMainSlotsSize > this.getMainSlots().size() ? -1 : 1);
+			this.prevMainSlotsSize = this.getMainSlots().size();
+		}
 	}
 
 }

@@ -10,11 +10,11 @@ public interface IPlayerInventory {
 	
 	/**Get items in combined main + Infinitory*/
 	public void getCombinedInfinitory();
-	
-	/**Set item in combined main + Infinitory*/
-	public void setSetInfinitory(int index, ItemStack stack);
 
 	/**Get additional slots for this player - always multiple of 9*/
 	public int getAdditionalSlots();
+
+	/**Mark as possibly needing to update additional slots of infinitory*/
+	public void needToUpdateInfinitorySize();
 	
 }

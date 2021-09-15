@@ -22,9 +22,10 @@ public class InfinitorySlot extends CreativeSlot {
 	@Nullable
 	private Pair<Identifier, Identifier> backgroundSprite;
 	private boolean isVisible;
-	private int originalX;
-	private int originalY;
+	public int originalX;
+	public int originalY;
 	public PlayerEntity player;
+	public boolean stackNonStackables;
 
 	public InfinitorySlot(Slot oldSlot, int id, int index, int x, int y, Pair<Identifier, Identifier> backgroundSprite) {
 		super(oldSlot, index, x, y);
@@ -40,11 +41,12 @@ public class InfinitorySlot extends CreativeSlot {
 			((ISlot)this).setX(InfinitorySlot.OFF_SCREEN_X);
 			((ISlot)this).setY(InfinitorySlot.OFF_SCREEN_Y);
 		}
+		this.stackNonStackables = index > 8 && (index < 36 || index > 40);
 	}
 
 	@Override
 	public int getMaxItemCount(ItemStack stack) {
-		return Config.maxStackSize;
+		return !this.stackNonStackables && !stack.isStackable() ? stack.getMaxCount() : Config.maxStackSize;
 	}
 
 	@Override
@@ -61,7 +63,8 @@ public class InfinitorySlot extends CreativeSlot {
 	public void setRowsOffset(int rowsOffset) {
 		if (this instanceof ISlot) {
 			int offsetIndex = this.getIndex() + 9 * rowsOffset;
-			if (offsetIndex >= 9 && offsetIndex <= 40) {
+			if ((this.getIndex() > 40 && offsetIndex >= 14 && offsetIndex <= 40) ||
+					(this.getIndex() <= 40 && offsetIndex >= 9 && offsetIndex <= 40)) {
 				((ISlot) this).setX(this.originalX);
 				((ISlot) this).setY(this.originalY + 18 * rowsOffset);
 				this.isVisible = true;
@@ -71,6 +74,7 @@ public class InfinitorySlot extends CreativeSlot {
 				((ISlot)this).setY(InfinitorySlot.OFF_SCREEN_Y);
 				this.isVisible = false;
 			}
+			//System.out.println("index: "+this.getIndex()+", y: "+this.y+", origY: "+this.originalY+", offsetIndex: "+offsetIndex+", rowsOffset: "+rowsOffset); // TODO remove
 		}
 	}
 

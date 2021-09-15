@@ -2,6 +2,7 @@ package furgl.infinitory.mixin.inventory;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import furgl.infinitory.config.Config;
 import furgl.infinitory.utils.Utils;
@@ -77,7 +78,7 @@ public abstract class PlayerScreenHandlerMixin extends ScreenHandlerMixin implem
 					return ItemStack.EMPTY;
 			} 
 			// main inventory -> hotbar
-			else if (index >= 9 && index < 36) {
+			else if (index >= 9 && (index < 36 || index > 45)) {
 				if (!this.callInsertItem(itemStack2, 36, 45, false)) 
 					return ItemStack.EMPTY;
 			} 

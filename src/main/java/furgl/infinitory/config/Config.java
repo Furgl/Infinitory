@@ -4,7 +4,8 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
-import java.io.FileWriter;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -17,6 +18,7 @@ import net.minecraft.util.math.MathHelper;
 public class Config {
 
 	private static final Gson GSON = new GsonBuilder()
+			.disableHtmlEscaping()
 			.setPrettyPrinting()
 			.serializeNulls()
 			.create();
@@ -25,6 +27,7 @@ public class Config {
 
 	public static int maxStackSize;
 	public static int maxExtraSlots;
+	public static int dropsOnDeath;
 
 	public static void init() {
 		try {
@@ -44,15 +47,27 @@ public class Config {
 	}
 
 	private static void readFromFile() {
-		try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+		try (BufferedReader reader = Files.newBufferedReader(file.toPath(), StandardCharsets.UTF_8)) {
 			JsonObject parser = (JsonObject) JsonHelper.deserialize(reader);
 
 			JsonElement element = parser.get("Max Item Stack Size");
-			maxStackSize = MathHelper.clamp(element.getAsInt(), 64, Integer.MAX_VALUE);
-			
+			if (element == null)
+				maxStackSize = Integer.MAX_VALUE;
+			else
+				maxStackSize = MathHelper.clamp(element.getAsInt(), 64, Integer.MAX_VALUE);
+
 			element = parser.get("Max Extra Inventory Slots");
-			maxExtraSlots = MathHelper.clamp(element.getAsInt(), 0, Integer.MAX_VALUE);
-			
+			if (element == null)
+				maxExtraSlots = Integer.MAX_VALUE;
+			else
+				maxExtraSlots = MathHelper.clamp(element.getAsInt(), 0, Integer.MAX_VALUE);
+
+			element = parser.get("Items to Drop on Death (when keepInventory = false) (0 = Everything, 1 = Up to a stack of each item, 2 = Up to a stack of each item in your hotbar, offhand, and armor slots)");
+			if (element == null)
+				dropsOnDeath = 1;
+			else
+				dropsOnDeath = MathHelper.clamp(element.getAsInt(), 0, 2);
+
 		} 
 		catch (Exception e) {
 			e.printStackTrace();
@@ -60,11 +75,12 @@ public class Config {
 	}
 
 	public static void writeToFile(boolean writeDefaults) {
-		try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+		try (BufferedWriter writer = Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8)) {
 			JsonObject obj = new JsonObject();
 
 			obj.addProperty("Max Item Stack Size", writeDefaults ? Integer.MAX_VALUE : maxStackSize);
 			obj.addProperty("Max Extra Inventory Slots", writeDefaults ? Integer.MAX_VALUE : maxExtraSlots);
+			obj.addProperty("Items to Drop on Death (when keepInventory = false) (0 = Everything, 1 = Up to a stack of each item, 2 = Up to a stack of each item in your hotbar, offhand, and armor slots)", writeDefaults ? 1 : dropsOnDeath);
 
 			writer.write(GSON.toJson(obj));
 		} 

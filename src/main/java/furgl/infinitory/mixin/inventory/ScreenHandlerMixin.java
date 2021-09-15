@@ -1,5 +1,6 @@
 package furgl.infinitory.mixin.inventory;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Optional;
@@ -12,14 +13,18 @@ import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.At.Shift;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 import furgl.infinitory.config.Config;
+import furgl.infinitory.impl.inventory.IPlayerInventory;
 import furgl.infinitory.impl.inventory.IScreenHandler;
 import furgl.infinitory.impl.inventory.InfinitorySlot;
 import furgl.infinitory.impl.lists.SlotDefaultedList;
@@ -42,13 +47,13 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 	@Unique
 	public HashMap<Integer, InfinitorySlot> mainSlots = Maps.newHashMap();
 	@Unique
-	private boolean addedExtraSlots;
-	@Unique
 	public int scrollbarX;
 	@Unique
 	public int scrollbarMinY;
 	@Unique
 	public int scrollbarMaxY;
+	@Unique
+	private ArrayList<Slot> addedSlots = Lists.newArrayList();
 
 	@Shadow
 	private int quickCraftButton;
@@ -64,18 +69,18 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 	protected abstract void endQuickCraft();
 	@Shadow
 	protected abstract StackReference getCursorStackReference();
-	
+
 	@Unique
 	@Override
 	public HashMap<Integer, InfinitorySlot> getMainSlots() {
 		return this.mainSlots;
 	}
-	
+
 	@Unique
 	@Override
 	public void clearMainSlots() {
 		this.mainSlots.clear();
-		this.addedExtraSlots = false;
+		this.addedSlots.clear();
 	}
 
 	@Unique
@@ -99,26 +104,53 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 	@Unique
 	@Override
 	public void addExtraSlots() { 
+		//System.out.println("check extra slots: "+this.slots.size()); // TODO remove
 		// add extra slots
-		if (!this.addedExtraSlots && this.mainSlots.size() == 27) {
+		if (this.mainSlots.size() >= 27) {
 			InfinitorySlot slot = this.mainSlots.entrySet().iterator().next().getValue(); // get first slot
-			for (int i=0; i<Utils.getAdditionalSlots(slot.player); ++i) { // is this the correct id to use? does it matter?
-				InfinitorySlot newSlot = new InfinitorySlot(slot, slot.id+37+i, 41+i, slot.x + (i % 9) * 18, slot.y + (i / 9 + 3) * 18, slot.getBackgroundSprite());
-				if ((Object)this instanceof CreativeScreenHandler) 
-					((ScreenHandler)(Object)this).slots.add(newSlot); // creative slots don't call addSlot() when added (they're just wrapped in CreativeSlot)
-				else 
-					this.callAddSlot(newSlot); // THIS NEEDS TO HAPPEN AFTER ALL VANILLA SLOTS ARE ADDED OR ELSE ID -> SLOT GETS MIXED UP
+			// if current amount of slots doesn't match additionalSlots
+			if (this.addedSlots.size() != Utils.getAdditionalSlots(slot.player)) {
+				//System.out.println("add extra slots: "+this.slots.size()+", difference: "+(Utils.getAdditionalSlots(slot.player)-this.addedSlots.size())+", additional: "+Utils.getAdditionalSlots(slot.player)+", main size: "+this.mainSlots.size()+", infinitory: "+((IPlayerInventory)slot.player.getInventory()).getInfinitory()); // TODO remove
+				int x = slot instanceof InfinitorySlot ? ((InfinitorySlot)slot).originalX : slot.x;
+				int y = slot instanceof InfinitorySlot ? ((InfinitorySlot)slot).originalY : slot.y;
+				// add extra slots
+				for (int i=this.addedSlots.size(); i<Utils.getAdditionalSlots(slot.player); ++i) { // is this the correct id to use? does it matter?
+					InfinitorySlot addSlot = new InfinitorySlot(slot, slot.id+37+i, 41+i, x + (i % 9) * 18, y + (i / 9 + 3) * 18, slot.getBackgroundSprite());
+					if ((Object)this instanceof CreativeScreenHandler) 
+						((ScreenHandler)(Object)this).slots.add(addSlot); // creative slots don't call addSlot() when added (they're just wrapped in CreativeSlot)
+					else 
+						this.callAddSlot(addSlot); // THIS NEEDS TO HAPPEN AFTER ALL VANILLA SLOTS ARE ADDED OR ELSE ID -> SLOT GETS MIXED UP
+					this.addedSlots.add(addSlot);
+				}
+				// remove extra slots
+				while (this.addedSlots.size() > Utils.getAdditionalSlots(slot.player)) {
+					Slot removeSlot = this.addedSlots.remove(this.addedSlots.size()-1);
+					this.slots.remove(removeSlot);
+					this.mainSlots.remove(removeSlot.id);
+				}
+				// update infinitory size if needed
+				DefaultedList<ItemStack> infinitory = ((IPlayerInventory)slot.player.getInventory()).getInfinitory();
+				while (infinitory.size() < Utils.getAdditionalSlots(slot.player))
+					infinitory.add(ItemStack.EMPTY);
+				while (infinitory.size() > Utils.getAdditionalSlots(slot.player) && infinitory.get(infinitory.size()-1).isEmpty())
+					infinitory.remove(infinitory.size()-1);
+				// set scrollbar location
+				this.scrollbarX = x + 170;
+				this.scrollbarMinY = y;
+				this.scrollbarMaxY = y + 54;
+				//System.out.println("after add extra slots: "+this.slots.size()+", difference: "+(Utils.getAdditionalSlots(slot.player)-this.addedSlots.size())+", additional: "+Utils.getAdditionalSlots(slot.player)+", main size: "+this.mainSlots.size()+", infinitory: "+((IPlayerInventory)slot.player.getInventory()).getInfinitory()); // TODO remove
 			}
-			this.scrollbarX = slot.x + 170;
-			this.scrollbarMinY = slot.y;
-			this.scrollbarMaxY = slot.y + 54;
-			this.addedExtraSlots = true;
 		}
 	}
 
 	/**Copied entire method and edited by the comments because there are so many changes*/
 	@Inject(method = "internalOnSlotClick", at = @At(value = "INVOKE"), cancellable = true)
 	public void internalOnSlotClick(int slotIndex, int button, SlotActionType actionType, PlayerEntity player, CallbackInfo ci) {
+		//System.out.println("index: "+slotIndex); // TODO remove
+		// invalid index (may happen with changing inventory size)
+		if (slotIndex > ((ScreenHandler)(Object)this).slots.size()-1)
+			return;
+
 		PlayerInventory playerInventory = player.getInventory();
 		Slot slot4;
 		ItemStack itemStack6;
@@ -323,7 +355,8 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 							}
 						}
 					}
-				} else if (actionType == SlotActionType.CLONE && player.getAbilities().creativeMode && ((ScreenHandler)(Object)this).getCursorStack().isEmpty() && slotIndex >= 0) {
+				} else if (actionType == SlotActionType.CLONE && player.getAbilities().creativeMode && ((ScreenHandler)(Object)this).getCursorStack().isEmpty() && 
+						slotIndex >= 0) {
 					slot5 = (Slot)((ScreenHandler)(Object)this).slots.get(slotIndex);
 					if (slot5.hasStack()) {
 						itemStack2 = slot5.getStack().copy();
@@ -338,7 +371,7 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 					itemStack6 = slot5.takeStackRange(j, slot5.getStack().getMaxCount()/*Config.maxStackSize*/, player);
 					player.dropItem(itemStack6, true);
 				} else if (actionType == SlotActionType.PICKUP_ALL && slotIndex >= 0) {
-					slot5 = (Slot)((ScreenHandler)(Object)this).slots.get(slotIndex);
+					slot5 = ((ScreenHandler)(Object)this).slots.get(slotIndex);
 					itemStack2 = ((ScreenHandler)(Object)this).getCursorStack();
 					if (!itemStack2.isEmpty() && (!slot5.hasStack() || !slot5.canTakeItems(player))) {
 						k = button == 0 ? 0 : ((ScreenHandler)(Object)this).slots.size() - 1;
@@ -364,11 +397,48 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 		ci.cancel();
 	}
 
+	/**Only insert what slot allows (i.e. moving stack of non-stackables from main inventory to hotbar)*/
+	@Inject(method = "insertItem", at = @At(value = "INVOKE", target = "Lnet/minecraft/screen/slot/Slot;canInsert(Lnet/minecraft/item/ItemStack;)Z", shift = Shift.AFTER), locals = LocalCapture.CAPTURE_FAILSOFT, cancellable = true)
+	public void canInsertInsertItem(ItemStack stack, int startIndex, int endIndex, boolean fromLast, CallbackInfoReturnable<Boolean> ci, boolean bl, int i, Slot slot2) {
+		// MC just uses slot2.getMaxItemCount()
+		if (stack.getCount() > slot2.getMaxItemCount(stack)) {
+			slot2.setStack(stack.split(slot2.getMaxItemCount(stack)));
+			slot2.markDirty();
+			ci.setReturnValue(true);
+			ci.cancel();
+		}
+	}
+
+	/**Only insert what slot allows (i.e. moving stack of non-stackables from main inventory to hotbar)*/
+	@Redirect(method = "insertItem", at = @At(value = "INVOKE", target = "Lnet/minecraft/item/ItemStack;canCombine(Lnet/minecraft/item/ItemStack;Lnet/minecraft/item/ItemStack;)Z"))
+	public boolean canCombineInsertItem(ItemStack stack, ItemStack otherStack) {
+		boolean ret = ItemStack.canCombine(stack, otherStack);
+		if (ret) 
+			for (Slot slot : this.slots)
+				if (slot != null && slot.inventory instanceof PlayerInventory && slot.getStack() == otherStack) {
+					ret &= slot.getMaxItemCount(stack) > otherStack.getCount();
+					break;
+				}
+		return ret;
+	}
+
+	/**Allow non-stackables to stack when shift-clicking*/
+	@Redirect(method = "insertItem", at = @At(value = "INVOKE", target = "Lnet/minecraft/item/ItemStack;isStackable()Z"))
+	public boolean isStackableInsertItem(ItemStack stack) {
+		return true;
+	}
+
+	/**Inserting item from other inventory -> player inventory, allow up to MAX_VALUE stacks*/
 	@Redirect(method = "insertItem", at = @At(value = "INVOKE", target = "Lnet/minecraft/item/ItemStack;getMaxCount()I"))
 	public int getMaxCountInsertItem(ItemStack stack) {
-		// if this is MAX_VALUE, can transfer to other inventories with infinite stacks
-		// FIXME if this is max count, transferring to player inventory will not stack with infinite stacks
-		return stack.getMaxCount(); 
+		// if this stack is currently in the player's inventory, then we're inserting into another inventory, so only allow up to stack.getMaxCount()
+		boolean inPlayerInventory = false;
+		for (Slot slot : this.slots)
+			if (slot != null && slot.inventory instanceof PlayerInventory && slot.getStack() == stack) {
+				inPlayerInventory = true;
+				break;
+			}
+		return inPlayerInventory ? stack.getMaxCount() : Integer.MAX_VALUE; 
 	}
 
 	@Inject(method = "canInsertItemIntoSlot", at = @At(value = "INVOKE", target = "Lnet/minecraft/item/ItemStack;getMaxCount()I"), cancellable = true)

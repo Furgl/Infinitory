@@ -14,9 +14,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 
 import furgl.infinitory.config.Config;
 import furgl.infinitory.impl.inventory.IPlayerInventory;
+import furgl.infinitory.impl.lists.ListeningDefaultedList;
 import furgl.infinitory.impl.lists.MainDefaultedList;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.Inventory;
@@ -31,7 +33,11 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 
 	/**Infinitory's extra inventory slots*/
 	@Unique
-	private DefaultedList<ItemStack> infinitory; 
+	private ListeningDefaultedList infinitory; 
+	@Unique
+	private int additionalSlots;
+	@Unique
+	private boolean needToUpdateInfinitorySize;
 
 	@Shadow @Final @Mutable
 	public DefaultedList<ItemStack> main;
@@ -45,20 +51,124 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 	@Inject(method = "<init>", at = @At("TAIL"))
 	public void constructor(CallbackInfo ci) {
 		this.main = MainDefaultedList.ofSize(36, ItemStack.EMPTY, this);
-		this.infinitory = DefaultedList.ofSize(getAdditionalSlots(), ItemStack.EMPTY);
+		this.infinitory = ListeningDefaultedList.of(this);
 		this.combinedInventory = ImmutableList.of(this.main, this.armor, this.offHand, this.infinitory);
+		this.updateInfinitorySize();
+	}
+
+	/**Update main and infinitory full/empty status*/
+	@Unique
+	public void updateFullEmptyStatus() {
+		System.out.println(((PlayerInventory)(Object)this).player.currentScreenHandler.getCursorStack()); // TODO remove
+		/*if (((PlayerInventory)(Object)this).player.currentScreenHandler != null && 
+				((PlayerInventory)(Object)this).player.currentScreenHandler.getCursorStack().isEmpty()) {*/
+			boolean updateInfinitorySize = false;
+			for (ListeningDefaultedList list : new ListeningDefaultedList[] {(ListeningDefaultedList) this.main, this.infinitory}) {
+				list.isEmpty = true;
+				list.isFull = true;
+				for (int i=list instanceof MainDefaultedList ? 9 : 0; i<list.size(); ++i) {
+					ItemStack stack = list.get(i);
+					if (stack.isEmpty())
+						list.isFull = false;
+					else 
+						list.isEmpty = false;
+				}
+				System.out.println(list.getClass()+", isEmpty: "+list.isEmpty+", isFull: "+list.isFull+", "+list); // TODO remove
+				updateInfinitorySize = true;
+			}
+			// if status changed, update infinitory size
+			if (updateInfinitorySize)
+				this.updateInfinitorySize();
+		//}
+	}
+
+	/**Recalculate additional slots based on main and infinitory sizes / fullness*/
+	@Unique
+	public void updateInfinitorySize() { 
+		// main not full and infinitory empty = no additional slots
+		if (!((MainDefaultedList)this.main).isFull && this.infinitory.isEmpty)
+			this.additionalSlots = 0;
+		// main full and infinitory empty = 9 additional slots
+		else if (((MainDefaultedList)this.main).isFull && this.infinitory.isEmpty) 
+			this.additionalSlots = 9;
+		// infinitory is not empty = index of last item rounded up to 9 additional slots
+		else {
+			// get index of last item
+			int lastItem = 0;
+			boolean fullBeforeLastItem = ((MainDefaultedList)this.main).isFull;
+			for (int index=this.infinitory.size()-1; index >= 0; --index) {
+				boolean empty = this.infinitory.get(index).isEmpty();
+				if (!empty && lastItem == 0) 
+					lastItem = index;
+				else if (empty && lastItem > 0) {
+					fullBeforeLastItem = false;
+					break;
+				}
+			}
+			//System.out.println("lastItem: "+lastItem+", fullBeforeLastItem: "+fullBeforeLastItem+", size: "+this.infinitory.size()); // TODO remove
+			// index of last item rounded up to multiple of 9 additional slots
+			this.additionalSlots = lastItem + (9 - lastItem % 9);
+			// if full or last item is size-10 and full before that (meaning full except for empty row at the end) add extra row
+			if (this.infinitory.isFull || (fullBeforeLastItem && lastItem == this.infinitory.size()-10)) {
+				this.additionalSlots += 9;
+				this.infinitory.isFull = false;
+			}
+		}
+		// bound between 0 to config max
+		this.additionalSlots = MathHelper.clamp(additionalSlots, 0, Config.maxExtraSlots);
+		// must be multiple of 9
+		this.additionalSlots = this.additionalSlots - this.additionalSlots % 9;
+		//System.out.println("additional slots = "+this.additionalSlots+", main isEmpty: "+((MainDefaultedList)this.main).isEmpty+" isFull: "+((MainDefaultedList)this.main).isFull+", infinitory isEmpty: "+this.infinitory.isEmpty+" isFull: "+this.infinitory.isFull); // TODO remove
+		//System.out.println(this.infinitory); // TODO remove
+	}
+
+	@Inject(method = "updateItems", at = @At("TAIL"))
+	public void updateItems(CallbackInfo ci) {
+		if (this.needToUpdateInfinitorySize) {
+			this.updateFullEmptyStatus();
+			this.needToUpdateInfinitorySize = false;
+		}
+	}
+
+	@Unique
+	@Override
+	public void needToUpdateInfinitorySize() {
+		this.needToUpdateInfinitorySize = true;
 	}
 
 	@Unique
 	@Override
 	public int getAdditionalSlots() {
-		int additionalSlots = 30;
-		return MathHelper.clamp(additionalSlots - additionalSlots % 9, 0, Config.maxExtraSlots);
+		return this.additionalSlots;
 	}
 
 	@Override
 	public int getMaxCountPerStack() {
 		return Config.maxStackSize;
+	}
+
+	/**Drop different items depending on config option*/
+	@Inject(method = "dropAll", at = @At("HEAD"), cancellable = true)
+	public void dropAll(CallbackInfo ci) {
+		// up to stack of everything
+		if (Config.dropsOnDeath == 1) {
+			for (List<ItemStack> list : this.combinedInventory) 
+				for (ItemStack stack : list) 
+					if (!stack.isEmpty()) 
+						((PlayerInventory)(Object)this).player.dropItem(stack.split(stack.getMaxCount()), true, false);
+			ci.cancel();
+		}
+		// up to stack of hotbar and armor
+		else if (Config.dropsOnDeath == 2) {
+			List<ItemStack> list = Lists.newArrayList();
+			list.addAll(this.offHand);
+			list.addAll(this.armor);
+			list.addAll(this.main.subList(0, 9));
+			for (ItemStack stack : list) 
+				if (!stack.isEmpty()) 
+					((PlayerInventory)(Object)this).player.dropItem(stack.split(stack.getMaxCount()), true, false);
+			ci.cancel();
+		}
 	}
 
 	/**Have getOccupiedSlotWithRoomForStack check infinitory if it can't find a slot in main*/
@@ -139,6 +249,8 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 			if (nbtCompound.contains("InfinitorySlot")) {
 				int slot = nbtCompound.getInt("InfinitorySlot");
 				ItemStack itemStack = ItemStack.fromNbt(nbtCompound);
+				while (slot > this.infinitory.size() && this.infinitory.size() < Config.maxExtraSlots)
+					this.infinitory.add(ItemStack.EMPTY);
 				if (!itemStack.isEmpty() && slot >= 0 && slot < this.infinitory.size()) 
 					this.infinitory.set(slot, itemStack);
 			}

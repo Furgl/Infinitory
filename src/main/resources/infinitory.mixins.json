@@ -12,7 +12,8 @@
     "inventory.SlotMixin",
   "items.ItemStackMixin",
   "network.PacketByteBufMixin",
-  "network.ServerPlayNetworkHandlerMixin"
+  "network.ServerPlayNetworkHandlerMixin",
+  "network.ServerPlayerEntityMixin"
       ],
   "client": [
   "render.HandledScreenMixin",

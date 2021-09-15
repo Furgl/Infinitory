@@ -39,8 +39,8 @@ public class SlotDefaultedList<E extends Slot> extends DefaultedList<E> {
 			}
 			else {
 				int index = slot.getIndex();
-				int x = slot.x;
-				int y = slot.y;
+				int x = slot instanceof InfinitorySlot ? ((InfinitorySlot)slot).originalX : slot.x;
+				int y = slot instanceof InfinitorySlot ? ((InfinitorySlot)slot).originalY : slot.y;
 				int id = slot.id;
 				if (slot instanceof CreativeSlot) {
 					index = ((CreativeSlot)slot).slot.getIndex();
@@ -90,7 +90,10 @@ public class SlotDefaultedList<E extends Slot> extends DefaultedList<E> {
 	@Override
 	public E get(int index) {
 		onGet();
-		return super.get(index);
+		if (index < this.size()) // TEST
+			return super.get(index);
+		else
+			return super.get(this.size()-1);
 	}
 
 	@Override
