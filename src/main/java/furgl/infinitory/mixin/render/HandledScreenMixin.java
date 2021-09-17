@@ -20,14 +20,18 @@ import furgl.infinitory.config.Config;
 import furgl.infinitory.impl.inventory.IPlayerInventory;
 import furgl.infinitory.impl.inventory.IScreenHandler;
 import furgl.infinitory.impl.inventory.InfinitorySlot;
+import furgl.infinitory.impl.network.PacketManager;
 import furgl.infinitory.impl.render.IHandledScreen;
 import furgl.infinitory.utils.Utils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.CreativeInventoryScreen;
 import net.minecraft.client.gui.screen.ingame.CreativeInventoryScreen.CreativeScreenHandler;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
+import net.minecraft.client.gui.widget.TexturedButtonWidget;
 import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.player.PlayerInventory;
@@ -44,6 +48,8 @@ import net.minecraft.util.math.MathHelper;
 @Mixin(HandledScreen.class)
 public abstract class HandledScreenMixin<T extends ScreenHandler> extends Screen implements IHandledScreen {
 
+	private static final Identifier RECIPE_BUTTON_TEXTURE = new Identifier("textures/gui/recipe_button.png");
+	
 	@Shadow
 	protected int x;
 	@Shadow
@@ -68,6 +74,13 @@ public abstract class HandledScreenMixin<T extends ScreenHandler> extends Screen
 	@Inject(method = "<init>", at = @At(value = "TAIL"))
 	private void constructor(T handler, PlayerInventory inventory, Text title, CallbackInfo ci) {
 		this.playerInventory = inventory;
+	}
+	
+	@Inject(method = "init", at = @At(value = "TAIL"))
+	public void init(CallbackInfo ci) {
+		((ScreenAccessor)this).callAddDrawableChild(new TexturedButtonWidget(this.x + 204, this.height / 2 - 22, 20, 18, 0, 0, 19, RECIPE_BUTTON_TEXTURE, (button) -> {
+            ClientPlayNetworking.send(PacketManager.SORT_PACKET_ID, PacketByteBufs.empty());
+         }));
 	}
 	
 	@Unique

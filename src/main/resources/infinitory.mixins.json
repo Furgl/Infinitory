@@ -19,7 +19,7 @@
   "render.HandledScreenMixin",
   "items.ItemRendererMixin",
   "render.CreativeInventoryScreenMixin",
-  "render.HandledScreenAccessor",
+  "render.ScreenAccessor",
   "render.MouseMixin"
     ],
   "injectors": {

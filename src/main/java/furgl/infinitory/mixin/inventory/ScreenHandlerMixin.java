@@ -79,6 +79,7 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 	@Unique
 	@Override
 	public void clearMainSlots() {
+		System.out.println("clear main slots================================================================================="); // TODO remove
 		this.mainSlots.clear();
 		this.addedSlots.clear();
 	}
@@ -104,22 +105,31 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 	@Unique
 	@Override
 	public void addExtraSlots() { 
-		//System.out.println("check extra slots: "+this.slots.size()); // TODO remove
 		// add extra slots
 		if (this.mainSlots.size() >= 27) {
 			InfinitorySlot slot = this.mainSlots.entrySet().iterator().next().getValue(); // get first slot
+			//System.out.println("check extra slots: "+this.slots.size()+", added: "+this.addedSlots.size()+", additional: "+Utils.getAdditionalSlots(slot.player)); // TODO remove
 			// if current amount of slots doesn't match additionalSlots
 			if (this.addedSlots.size() != Utils.getAdditionalSlots(slot.player)) {
-				//System.out.println("add extra slots: "+this.slots.size()+", difference: "+(Utils.getAdditionalSlots(slot.player)-this.addedSlots.size())+", additional: "+Utils.getAdditionalSlots(slot.player)+", main size: "+this.mainSlots.size()+", infinitory: "+((IPlayerInventory)slot.player.getInventory()).getInfinitory()); // TODO remove
+				System.out.println("add extra slots: "+this.slots.size()+", difference: "+(Utils.getAdditionalSlots(slot.player)-this.addedSlots.size())+", additional: "+Utils.getAdditionalSlots(slot.player)+", main size: "+this.mainSlots.size()+", infinitory: "+((IPlayerInventory)slot.player.getInventory()).getInfinitory()); // TODO remove
+				System.out.println("main slots: "+this.mainSlots); // TODO remove
 				int x = slot instanceof InfinitorySlot ? ((InfinitorySlot)slot).originalX : slot.x;
 				int y = slot instanceof InfinitorySlot ? ((InfinitorySlot)slot).originalY : slot.y;
 				// add extra slots
 				for (int i=this.addedSlots.size(); i<Utils.getAdditionalSlots(slot.player); ++i) { // is this the correct id to use? does it matter?
 					InfinitorySlot addSlot = new InfinitorySlot(slot, slot.id+37+i, 41+i, x + (i % 9) * 18, y + (i / 9 + 3) * 18, slot.getBackgroundSprite());
-					if ((Object)this instanceof CreativeScreenHandler) 
-						((ScreenHandler)(Object)this).slots.add(addSlot); // creative slots don't call addSlot() when added (they're just wrapped in CreativeSlot)
+					// somehow client likes to add slots that are already added (in creative), which messes up server->client syncs
+					/*if (((ScreenHandler)(Object)this).slots instanceof SlotDefaultedList && 
+							!((SlotDefaultedList)((ScreenHandler)(Object)this).slots).alreadyExists(addSlot)) {*/
+					//System.out.println("doesn't already exist: index:"+addSlot.getIndex()+", inventory:"+addSlot.inventory); // TODO remove
+					if ((Object)this instanceof CreativeScreenHandler) {// TEST inserting 1 before last in creative (bc last is junk slot)
+//						if (addSlot.getIndex() > 40)
+//							addSlot.id = ((ScreenHandler)(Object)this).slots.size(); // fixes client slot id not matching index and causing desyncs
+						((ScreenHandler)(Object)this).slots.add(((ScreenHandler)(Object)this).slots.isEmpty() ? 0 : ((ScreenHandler)(Object)this).slots.size()-1, addSlot); // creative slots don't call addSlot() when added (they're just wrapped in CreativeSlot)
+					}
 					else 
 						this.callAddSlot(addSlot); // THIS NEEDS TO HAPPEN AFTER ALL VANILLA SLOTS ARE ADDED OR ELSE ID -> SLOT GETS MIXED UP
+					//}
 					this.addedSlots.add(addSlot);
 				}
 				// remove extra slots
@@ -127,6 +137,7 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 					Slot removeSlot = this.addedSlots.remove(this.addedSlots.size()-1);
 					this.slots.remove(removeSlot);
 					this.mainSlots.remove(removeSlot.id);
+					System.out.println("removing slot: "+removeSlot); // TODO remove
 				}
 				// update infinitory size if needed
 				DefaultedList<ItemStack> infinitory = ((IPlayerInventory)slot.player.getInventory()).getInfinitory();
@@ -146,7 +157,7 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 	/**Copied entire method and edited by the comments because there are so many changes*/
 	@Inject(method = "internalOnSlotClick", at = @At(value = "INVOKE"), cancellable = true)
 	public void internalOnSlotClick(int slotIndex, int button, SlotActionType actionType, PlayerEntity player, CallbackInfo ci) {
-		//System.out.println("index: "+slotIndex); // TODO remove
+		System.out.println("index: "+slotIndex); // TODO remove
 		// invalid index (may happen with changing inventory size)
 		if (slotIndex > ((ScreenHandler)(Object)this).slots.size()-1)
 			return;

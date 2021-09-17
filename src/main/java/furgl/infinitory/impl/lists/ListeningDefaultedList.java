@@ -37,11 +37,13 @@ public class ListeningDefaultedList extends DefaultedList<ItemStack> {
 
 	/**Update empty/full status*/
 	private void updateStatus() {
+		//System.out.println(this.getClass()+": "+this); // TODO remove
 		this.playerInventory.needToUpdateInfinitorySize();
 	}
 
 	@Override
 	public ItemStack set(int index, ItemStack element) {
+		//System.out.println(this.getClass()+", set index: "+index+", element: "+element); // TODO remove
 		ItemStack ret = super.set(index, element);
 		updateStatus();
 		return ret;
@@ -49,6 +51,7 @@ public class ListeningDefaultedList extends DefaultedList<ItemStack> {
 
 	@Override
 	public void add(int index, ItemStack element) {
+		//System.out.println("add index: "+index+", element: "+element); // TODO remove
 		super.add(index, element);
 		updateStatus();
 	}

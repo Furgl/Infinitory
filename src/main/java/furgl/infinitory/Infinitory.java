@@ -1,6 +1,7 @@
 package furgl.infinitory;
 
 import furgl.infinitory.config.Config;
+import furgl.infinitory.impl.network.PacketManager;
 import net.fabricmc.api.ModInitializer;
 
 public class Infinitory implements ModInitializer {
@@ -13,6 +14,7 @@ public class Infinitory implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		Config.init();
+		PacketManager.init();
 	}
 	
 }

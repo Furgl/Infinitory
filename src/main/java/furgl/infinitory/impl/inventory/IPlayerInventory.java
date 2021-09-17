@@ -14,7 +14,12 @@ public interface IPlayerInventory {
 	/**Get additional slots for this player - always multiple of 9*/
 	public int getAdditionalSlots();
 
-	/**Mark as possibly needing to update additional slots of infinitory*/
+	/**Mark as needing to update additional slots of infinitory*/
 	public void needToUpdateInfinitorySize();
+	
+	public SortingType getSortingType();
+	
+	/**Mark as needing to sort inventory*/
+	public void needToSort();
 	
 }

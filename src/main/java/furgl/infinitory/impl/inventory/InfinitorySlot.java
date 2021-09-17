@@ -77,6 +77,11 @@ public class InfinitorySlot extends CreativeSlot {
 			//System.out.println("index: "+this.getIndex()+", y: "+this.y+", origY: "+this.originalY+", offsetIndex: "+offsetIndex+", rowsOffset: "+rowsOffset); // TODO remove
 		}
 	}
+	
+	@Override
+	public String toString() {
+		return "[id:"+this.id+",index:"+this.getIndex()+",stack:"+this.getStack()+"]";
+	}
 
 	// CREATIVE SLOT STUFF (OVERRIDE THEM SO THIS BEHAVES AS IF IT EXTENDS SLOT INSTEAD OF CREATIVESLOT)
 	@Override

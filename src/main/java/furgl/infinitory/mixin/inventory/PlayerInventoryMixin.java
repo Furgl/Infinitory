@@ -1,5 +1,6 @@
 package furgl.infinitory.mixin.inventory;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.spongepowered.asm.mixin.Final;
@@ -18,6 +19,8 @@ import com.google.common.collect.Lists;
 
 import furgl.infinitory.config.Config;
 import furgl.infinitory.impl.inventory.IPlayerInventory;
+import furgl.infinitory.impl.inventory.IScreenHandler;
+import furgl.infinitory.impl.inventory.SortingType;
 import furgl.infinitory.impl.lists.ListeningDefaultedList;
 import furgl.infinitory.impl.lists.MainDefaultedList;
 import net.minecraft.entity.player.PlayerInventory;
@@ -25,12 +28,24 @@ import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
+import net.minecraft.screen.ScreenHandler;
+import net.minecraft.screen.slot.Slot;
 import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.math.MathHelper;
 
 @Mixin(PlayerInventory.class)
 public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventory {
 
+	// Separate main and infinitory
+	// PROS: easy to read/write, 
+	// CONS: buggy af with server->client sync
+	
+	// Expanding main
+	// PROS: 
+	// CONS: harder to read/write
+	
+	@Unique
+	private SortingType sortingType;
 	/**Infinitory's extra inventory slots*/
 	@Unique
 	private ListeningDefaultedList infinitory; 
@@ -40,6 +55,11 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 	private boolean needToUpdateInfinitorySize;
 	@Unique
 	private boolean needToUpdateClient;
+	@Unique
+	private boolean needToSort;
+	/**Combined main + infinitory list for sorting*/
+	@Unique
+	public ArrayList<ItemStack> mainInfinitory = Lists.newArrayList();
 
 	@Shadow @Final @Mutable
 	public DefaultedList<ItemStack> main;
@@ -58,13 +78,73 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 		this.updateInfinitorySize();
 	}
 
+	// ========== SORTING ==========
+
+	@Unique
+	private void sort() {
+		this.sortingType = SortingType.QUANTITY; // TODO remove
+		if (!((PlayerInventory)(Object)this).player.world.isClient && this.getSortingType() != SortingType.NONE) {
+			// combine all items into one list
+			this.mainInfinitory.clear();
+			for (List<ItemStack> list : Lists.newArrayList(this.infinitory, this.main.subList(9, this.main.size())))
+				for (ItemStack addingStack : list) {
+					outer:
+						if (!addingStack.isEmpty()) {
+							// try to stack with existing items in list
+							for (ItemStack stack : this.mainInfinitory)
+								if (this.canStackAddMore(stack, addingStack)) {
+									int amountToAdd = addingStack.getCount();
+									if (amountToAdd > this.getMaxCountPerStack() - stack.getCount()) 
+										amountToAdd = this.getMaxCountPerStack() - stack.getCount();
+									if (amountToAdd > 0) {
+										System.out.println("combining "+amountToAdd+"x "+addingStack.getName().getString()); // TODO remove
+										stack.increment(amountToAdd);
+										addingStack.decrement(amountToAdd);
+										// addingStack empty - we can skip to the next item
+										if (addingStack.isEmpty())
+											break outer;
+									}
+								}
+							// didn't find anything to stack with, add to list (don't worry about max size - should be handled already)
+							System.out.println("adding "+addingStack.getCount()+"x "+addingStack.getName().getString()); // TODO remove
+							this.mainInfinitory.add(addingStack.copy());
+						}
+				}
+			// sort
+			this.getSortingType().sort(this.mainInfinitory, true);
+			// copy from sorted list to main and infinitory
+			for (int i=9; i<this.main.size(); ++i)
+				this.main.set(i, ItemStack.EMPTY);
+			this.infinitory.clear();
+			for (int i=0; i<this.mainInfinitory.size(); ++i) 
+				if ((i+9)<this.main.size())
+					this.main.set(i+9, this.mainInfinitory.get(i));
+				else
+					this.infinitory.add(this.mainInfinitory.get(i));
+			// update to client
+			this.needToUpdateClient = true;
+		}
+	}
+
+	@Unique
+	@Override
+	public SortingType getSortingType() {
+		if (this.sortingType == null)
+			this.sortingType = SortingType.NONE;
+		return this.sortingType;
+	}
+
+	@Unique
+	@Override
+	public void needToSort() {
+		this.needToSort = true;
+	}
+
+	// ========== EXPANDING INVENTORY ==========
+
 	/**Update main and infinitory full/empty status*/
 	@Unique
 	public void updateFullEmptyStatus() {
-		//System.out.println(((PlayerInventory)(Object)this).player.currentScreenHandler.getCursorStack()); // TODO remove
-		/*if (((PlayerInventory)(Object)this).player.currentScreenHandler != null && 
-				((PlayerInventory)(Object)this).player.currentScreenHandler.getCursorStack().isEmpty()) {*/
-		boolean updateInfinitorySize = false;
 		for (ListeningDefaultedList list : new ListeningDefaultedList[] {(ListeningDefaultedList) this.main, this.infinitory}) {
 			list.isEmpty = true;
 			list.isFull = true;
@@ -76,12 +156,9 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 					list.isEmpty = false;
 			}
 			//System.out.println(list.getClass()+", isEmpty: "+list.isEmpty+", isFull: "+list.isFull+", "+list); // TODO remove
-			updateInfinitorySize = true;
-		}
-		// if status changed, update infinitory size
-		if (updateInfinitorySize)
 			this.updateInfinitorySize();
-		//}
+		}
+			
 	}
 
 	/**Recalculate additional slots based on main and infinitory sizes / fullness*/
@@ -136,6 +213,32 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 			((PlayerInventory)(Object)this).player.playerScreenHandler.updateToClient();
 			this.needToUpdateClient = false;
 		}
+		// sort
+		if (this.needToSort) {
+			this.sort();
+			this.needToSort = false;
+		}
+		
+		// TODO remove (client has infinitory twice?!?!?)
+		if (((PlayerInventory)(Object)this).player.age % 100 == 0) {
+			ScreenHandler handler = ((PlayerInventory)(Object)this).player.currentScreenHandler;
+			DefaultedList<Slot> slots = handler.slots;
+			String str = this.size()+"";
+			for (int i=0; i<this.size(); ++i)
+				str += "[i:"+i+",index:"+slots.get(i).getIndex()+",id:"+slots.get(i).id+",stack:"+slots.get(i).getStack()+"],";
+			System.out.println("(Current) "+handler.getClass().getSimpleName()+": ");
+			System.out.println(" - slots: "+str);
+			System.out.println(" - mainSlots: "+((IScreenHandler)handler).getMainSlots().size()+((IScreenHandler)handler).getMainSlots());
+			
+			handler = ((PlayerInventory)(Object)this).player.playerScreenHandler;
+			slots = handler.slots;
+			str = this.size()+"";
+			for (int i=0; i<this.size(); ++i)
+				str += "[i:"+i+",index:"+slots.get(i).getIndex()+",id:"+slots.get(i).id+",stack:"+slots.get(i).getStack()+"],";
+			System.out.println("(PlayerScreenHandler) "+handler.getClass().getSimpleName()+": ");
+			System.out.println(" - slots: "+str);
+			System.out.println(" - mainSlots: "+((IScreenHandler)handler).getMainSlots().size()+((IScreenHandler)handler).getMainSlots());
+		}
 	}
 
 	@Unique
@@ -154,6 +257,13 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 	public int getMaxCountPerStack() {
 		return Config.maxStackSize;
 	}
+
+	@Override
+	public DefaultedList<ItemStack> getInfinitory() {
+		return this.infinitory;
+	}
+
+	// ========== DROPS ON DEATH ==========
 
 	/**Drop different items depending on config option*/
 	@Inject(method = "dropAll", at = @At("HEAD"), cancellable = true)
@@ -178,6 +288,8 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 			ci.cancel();
 		}
 	}
+
+	// ========== EXPANDING STACK SIZE ==========
 
 	/**Have getOccupiedSlotWithRoomForStack check infinitory if it can't find a slot in main*/
 	@Inject(method = "getOccupiedSlotWithRoomForStack", at = @At("RETURN"), cancellable = true)
@@ -224,6 +336,8 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 		return Config.maxStackSize;
 	}
 
+	// ========== INCLUDING INFINITORY ==========
+
 	/**Include infinitory in size*/
 	@Inject(method = "size", at = @At("RETURN"), cancellable = true)
 	public void size(CallbackInfoReturnable<Integer> ci) {
@@ -247,6 +361,8 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 			}
 		}
 	}
+
+	// ========== NBT ==========
 
 	@Inject(method = "readNbt", at = @At("RETURN"))
 	public void readNbt(NbtList nbtList, CallbackInfo ci) {
@@ -279,11 +395,6 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 				nbtList.add(nbt);
 			}
 		}
-	}
-
-	@Override
-	public DefaultedList<ItemStack> getInfinitory() {
-		return this.infinitory;
 	}
 
 }
