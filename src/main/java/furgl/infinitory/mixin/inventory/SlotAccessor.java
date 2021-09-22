@@ -1,6 +1,7 @@
 package furgl.infinitory.mixin.inventory;
 
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
 import net.minecraft.screen.slot.Slot;
@@ -10,5 +11,8 @@ public interface SlotAccessor {
 
 	@Invoker
 	void callOnTake(int amount);
+	
+	@Accessor
+	void setIndex(int index);
 	
 }

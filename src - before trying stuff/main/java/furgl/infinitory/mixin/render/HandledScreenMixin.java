@@ -49,7 +49,7 @@ import net.minecraft.util.math.MathHelper;
 public abstract class HandledScreenMixin<T extends ScreenHandler> extends Screen implements IHandledScreen {
 
 	private static final Identifier RECIPE_BUTTON_TEXTURE = new Identifier("textures/gui/recipe_button.png");
-
+	
 	@Shadow
 	protected int x;
 	@Shadow
@@ -75,20 +75,28 @@ public abstract class HandledScreenMixin<T extends ScreenHandler> extends Screen
 	private void constructor(T handler, PlayerInventory inventory, Text title, CallbackInfo ci) {
 		this.playerInventory = inventory;
 	}
-
+	
 	@Inject(method = "init", at = @At(value = "TAIL"))
 	public void init(CallbackInfo ci) {
 		((ScreenAccessor)this).callAddDrawableChild(new TexturedButtonWidget(this.x + 204, this.height / 2 - 22, 20, 18, 0, 0, 19, RECIPE_BUTTON_TEXTURE, (button) -> {
-			ClientPlayNetworking.send(PacketManager.SORT_PACKET_ID, PacketByteBufs.empty());
-		}));
+            ClientPlayNetworking.send(PacketManager.SORT_PACKET_ID, PacketByteBufs.empty());
+         }));
 	}
-
+	
 	@Unique
 	@Override
 	public void resetScrollPosition() {
 		this.scrolling = false;
 		Utils.setScrollPosition(this.playerInventory.player, 0);
 		this.scrollItems(0);
+	}
+
+	@Unique
+	private HashMap<Integer, InfinitorySlot> getMainSlots() {
+		if (this.handler instanceof IScreenHandler)
+			return ((IScreenHandler)this.handler).getMainSlots();
+		else
+			return Maps.newHashMap();
 	}
 
 	@Unique
@@ -125,12 +133,10 @@ public abstract class HandledScreenMixin<T extends ScreenHandler> extends Screen
 	@Unique
 	@Override 
 	public void onMouseScroll(double mouseX, double mouseY, double amount) {
-		int increment = (this.playerInventory.main.size() - 36) / 9;
-		//System.out.println("increment: "+increment+", main: "+this.playerInventory.main.size()+this.playerInventory.main); // TODO remove
-		float scrollPosition = this.shouldShowScrollbar() ? (float)((double)Utils.getScrollPosition(this.playerInventory.player) - amount / (double)increment) : 0;
+		int i = (this.getMainSlots().size() + 9 - 1) / 9 - 3;
+		float scrollPosition = (float)((double)Utils.getScrollPosition(this.playerInventory.player) - amount / (double)i);
 		scrollPosition = MathHelper.clamp(scrollPosition, 0.0F, 1.0F);
 		Utils.setScrollPosition(this.playerInventory.player, scrollPosition);
-		//System.out.println("scrollPosition: "+scrollPosition); // TODO remove
 		this.scrollItems(scrollPosition);
 	}
 
@@ -175,12 +181,12 @@ public abstract class HandledScreenMixin<T extends ScreenHandler> extends Screen
 	@Unique
 	public void scrollItems(float position) { 
 		if (this.playerInventory instanceof IPlayerInventory) {
-			int size = this.playerInventory.main.size();
+			int size = this.getMainSlots().size();
 
-			int increment = (this.playerInventory.main.size() - 1) / 9 - 3;
-			int rowsOffset = -MathHelper.clamp((int)((double)(position * (float)increment) + 0.5D), 0, size / 9);
+			int i = (size + 9 - 1) / 9 - 3;
+			int rowsOffset = -MathHelper.clamp((int)((double)(position * (float)i) + 0.5D), 0, size / 9);
 
-			for (InfinitorySlot slot : ((IScreenHandler)this.handler).getInfinitorySlots()) 
+			for (InfinitorySlot slot : this.getMainSlots().values()) 
 				slot.setRowsOffset(rowsOffset);
 		}
 	}
@@ -189,7 +195,7 @@ public abstract class HandledScreenMixin<T extends ScreenHandler> extends Screen
 	public boolean shouldShowScrollbar() {
 		boolean creativeScreen = ((Object)this) instanceof CreativeInventoryScreen;
 		boolean creativeInventory = creativeScreen && ((CreativeInventoryScreen)(Object)this).getSelectedTab() == ItemGroup.INVENTORY.getIndex();
-		return this.playerInventory.main.size() > 36 && (!creativeScreen || creativeInventory);
+		return this.getMainSlots().size() > 27 && (!creativeScreen || creativeInventory);
 	}
 
 	@Inject(method = "render", at = @At(value = "TAIL"))
@@ -229,13 +235,13 @@ public abstract class HandledScreenMixin<T extends ScreenHandler> extends Screen
 		else
 			return stack.getMaxCount();
 	}
-
+	
 	@Inject(method = "tick", at = @At("HEAD"))
 	public void tick(CallbackInfo ci) { 
 		// scroll items when slot size changes
-		if (this.prevMainSlotsSize != this.playerInventory.main.size()) {
-			this.onMouseScroll(0, 0, this.prevMainSlotsSize > this.playerInventory.main.size() ? -1 : 1);
-			this.prevMainSlotsSize = this.playerInventory.main.size();
+		if (this.prevMainSlotsSize != this.getMainSlots().size()) {
+			this.onMouseScroll(0, 0, this.prevMainSlotsSize > this.getMainSlots().size() ? -1 : 1);
+			this.prevMainSlotsSize = this.getMainSlots().size();
 		}
 	}
 

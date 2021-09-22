@@ -5,23 +5,21 @@ import net.minecraft.util.collection.DefaultedList;
 
 public interface IPlayerInventory {
 
+	/**Infinitory's extra inventory slots*/
+	public DefaultedList<ItemStack> getInfinitory();
+	
+	/**Get items in combined main + Infinitory*/
+	public void getCombinedInfinitory();
+
 	/**Get additional slots for this player - always multiple of 9*/
 	public int getAdditionalSlots();
-	
-	public void setAdditionalSlots(int additionalSlots);
 
 	/**Mark as needing to update additional slots of infinitory*/
 	public void needToUpdateInfinitorySize();
-		
-	/**Mark as needing to sort inventory*/
-	public void needToSort();
-
-	/**Mark as needing to update client*/
-	void needToUpdateClient();
 	
 	public SortingType getSortingType();
-
-	/**Recalculate additional slots based on main and infinitory sizes / fullness*/
-	void updateInfinitorySize();
+	
+	/**Mark as needing to sort inventory*/
+	public void needToSort();
 	
 }

@@ -13,9 +13,17 @@ import net.minecraft.screen.slot.Slot;
 public abstract class SlotMixin implements ISlot {
 
 	@Shadow @Final @Mutable
+	private int index;
+	@Shadow @Final @Mutable
 	private int x;
 	@Shadow @Final @Mutable
 	private int y;
+	
+	@Unique
+	@Override
+	public void setIndex(int index) {
+		this.index = index;
+	}
 	
 	@Unique
 	@Override

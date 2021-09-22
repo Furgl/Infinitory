@@ -10,9 +10,6 @@ public class PacketManager {
 	public static final Identifier SORT_PACKET_ID = new Identifier(Infinitory.MODID, "sort");
 	
 	public static void init() {
-		// client -> server
-		
-		// client clicked sort button
 		ServerPlayNetworking.registerGlobalReceiver(SORT_PACKET_ID, (server, player, handler, buf, responseSender) -> {
 		    server.execute(() -> {
 		        ((IPlayerInventory)player.getInventory()).needToSort();

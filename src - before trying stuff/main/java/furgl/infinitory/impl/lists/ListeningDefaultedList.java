@@ -16,6 +16,8 @@ import net.minecraft.util.collection.DefaultedList;
 public class ListeningDefaultedList extends DefaultedList<ItemStack> {
 
 	protected IPlayerInventory playerInventory;
+	public boolean isEmpty = true;
+	public boolean isFull = true;
 	
 	public static ListeningDefaultedList of(IPlayerInventory playerInventory) {
 		return new ListeningDefaultedList(Lists.newArrayList(), null, playerInventory);
@@ -40,7 +42,7 @@ public class ListeningDefaultedList extends DefaultedList<ItemStack> {
 	}
 
 	@Override
-	public ItemStack set(int index, ItemStack element) { 
+	public ItemStack set(int index, ItemStack element) {
 		//System.out.println(this.getClass()+", set index: "+index+", element: "+element); // TODO remove
 		ItemStack ret = super.set(index, element);
 		updateStatus();

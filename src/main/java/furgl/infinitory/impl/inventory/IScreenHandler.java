@@ -1,19 +1,21 @@
 package furgl.infinitory.impl.inventory;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.collection.DefaultedList;
 
 public interface IScreenHandler {
 
-	public void addExtraSlots();
-	
-	public HashMap<Integer, InfinitorySlot> getMainSlots();
-	
-	public void clearMainSlots();
+	public void updateExtraSlots();
 	
 	public int getScrollbarX();
 	
 	public int getScrollbarMinY();
 	
 	public int getScrollbarMaxY();
+
+	public ArrayList<InfinitorySlot> getInfinitorySlots();
 	
 }
