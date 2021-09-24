@@ -1,9 +1,8 @@
 package furgl.infinitory.impl.inventory;
 
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.collection.DefaultedList;
-
 public interface IPlayerInventory {
+	
+	public int getDifferenceInAdditionalSlots();
 
 	/**Get additional slots for this player - always multiple of 9*/
 	public int getAdditionalSlots();
@@ -20,8 +19,18 @@ public interface IPlayerInventory {
 	void needToUpdateClient();
 	
 	public SortingType getSortingType();
+	
+	public void setSortingType(SortingType type);
+	
+	public boolean getSortingAscending();
+	
+	public void setSortAscending(boolean sortAscending);
 
 	/**Recalculate additional slots based on main and infinitory sizes / fullness*/
 	void updateInfinitorySize();
+
+	/**Sync additional slots, sorting type, and sorting ascending server -> client
+	 * and TODO save values for player*/
+	void syncInfinitoryValues();
 	
 }

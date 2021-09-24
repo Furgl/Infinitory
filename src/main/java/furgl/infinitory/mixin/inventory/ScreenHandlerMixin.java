@@ -1,7 +1,7 @@
 package furgl.infinitory.mixin.inventory;
 
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
@@ -24,13 +24,14 @@ import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 import com.google.common.collect.Lists;
 
 import furgl.infinitory.config.Config;
+import furgl.infinitory.impl.inventory.IPlayerInventory;
 import furgl.infinitory.impl.inventory.IScreenHandler;
 import furgl.infinitory.impl.inventory.ISlot;
 import furgl.infinitory.impl.inventory.InfinitorySlot;
 import furgl.infinitory.impl.inventory.InfinitorySlot.SlotType;
+import furgl.infinitory.impl.inventory.SortingType;
 import furgl.infinitory.impl.lists.SlotDefaultedList;
 import furgl.infinitory.utils.Utils;
-import net.minecraft.client.gui.screen.ingame.CreativeInventoryScreen.CreativeScreenHandler;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.StackReference;
@@ -50,10 +51,7 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 	public int scrollbarMinY;
 	@Unique
 	public int scrollbarMaxY;
-	/** Map of id -> slot of main inventory slots */
-	// @Unique
-	// public HashMap<Integer, InfinitorySlot> mainSlots = Maps.newHashMap();
-
+	
 	@Shadow
 	@Final
 	private DefaultedList<ItemStack> trackedStacks;
@@ -108,36 +106,6 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 				slots.add((InfinitorySlot) slot);
 		//System.out.println("infinitory slots: "+slots); // TODO remove
 		return slots;
-
-
-		/*// get total slots in player inventory (may vary in different screens)
-		int currentlyAddedExtraSlots = -1;
-		ArrayList<InfinitorySlot> playerSlots = Lists.newArrayList();
-		for (Slot slot : (List<Slot>) ((SlotDefaultedList) this.slots).delegate)
-			if (slot.inventory instanceof PlayerInventory && slot instanceof InfinitorySlot && ((InfinitorySlot)slot).originalX > 0 && ((InfinitorySlot)slot).originalY > 0) {
-				playerSlots.add((InfinitorySlot) slot);
-				if (currentlyAddedExtraSlots == -1)
-					currentlyAddedExtraSlots = ((PlayerInventory)slot.inventory).main.size()-36;
-			}
-		// sort by index
-		ArrayList<InfinitorySlot> ret = Lists.newArrayList();
-		if (currentlyAddedExtraSlots >= 0) {
-			playerSlots.sort(new Comparator<InfinitorySlot>() {
-				@Override
-				public int compare(InfinitorySlot s1, InfinitorySlot s2) {
-					return Integer.compare(s1.getIndex(), s2.getIndex());
-				}
-			});
-			// if main slots (8-(all player slots - 1 offhand - 4 armor), add to map
-			//System.out.println(currentlyAddedExtraSlots+" playerSlots: "+playerSlots.size()+playerSlots); // TODO remove
-			for (int i = 0; i < playerSlots.size(); ++i) {
-				InfinitorySlot slot = playerSlots.get(i);
-				if (slot.getIndex() > 8 && slot.getIndex() < 36+currentlyAddedExtraSlots)
-					ret.add(slot);
-			}
-		}
-		//System.out.println(currentlyAddedExtraSlots+" infinitorySlots: "+ret.size()+ret); // TODO remove
-		return ret;*/
 	}
 
 	/** Same as addSlot, except inserting at index */
@@ -170,7 +138,10 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 
 	@Unique
 	protected InfinitorySlot removeSlot(InfinitorySlot slot) {
-		//System.out.println(this.getClass().getSimpleName() + " before removing index " + slot.id + ": " + ((SlotDefaultedList) this.slots).delegate); // TODO remove
+		//System.out.println(this.getClass().getSimpleName() + " before removing index " + slot.id + " slots: " + ((SlotDefaultedList) this.slots).delegate.size()+((SlotDefaultedList) this.slots).delegate); // TODO remove
+		//System.out.println(this.getClass().getSimpleName() + " before removing index " + slot.id + " trackedStacks: " + trackedStacks.size()+trackedStacks); // TODO remove
+		//System.out.println(this.getClass().getSimpleName() + " before removing index " + slot.id + " previousTrackedStacks: " + previousTrackedStacks.size()+previousTrackedStacks); // TODO remove
+
 		if (slot.id < this.trackedStacks.size())
 			this.trackedStacks.remove(slot.id);
 		if (slot.id < this.previousTrackedStacks.size())
@@ -185,7 +156,10 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 			if (existingSlot.getIndex() >= slot.getIndex())
 				((ISlot) existingSlot).setIndex(existingSlot.getIndex() - 1);
 		}
-		//System.out.println(this.getClass().getSimpleName() + " after removing index " + slot.id + ": " + ((SlotDefaultedList) this.slots).delegate); // TODO remove
+		//System.out.println(this.getClass().getSimpleName() + " after removing index " + slot.id + " slots: " + ((SlotDefaultedList) this.slots).delegate.size()+((SlotDefaultedList) this.slots).delegate); // TODO remove
+		//System.out.println(this.getClass().getSimpleName() + " after removing index " + slot.id + " trackedStacks: " + trackedStacks.size()+trackedStacks); // TODO remove
+		//System.out.println(this.getClass().getSimpleName() + " after removing index " + slot.id + " previousTrackedStacks: " + previousTrackedStacks.size()+previousTrackedStacks); // TODO remove
+
 		return slot;
 	}
 
@@ -209,8 +183,7 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 			this.scrollbarMaxY = y + 54;
 			// if current amount of slots doesn't match additionalSlots
 			if ((infinitorySlots.size() - 27) != Utils.getAdditionalSlots(slot.player)) {
-				// System.out.println("add extra slots: "+this.slots.size()+", difference: "+(Utils.getAdditionalSlots(slot.player)-this.addedSlots.size())+", additional: "+Utils.getAdditionalSlots(slot.player)+", main size: "+this.mainSlots.size()+", infinitory: "+((IPlayerInventory)slot.player.getInventory()).getInfinitory()); // TODO remove
-				//System.out.println(this.getClass().getSimpleName() + " difference in infinitorySlots and additional slots, additional: " + Utils.getAdditionalSlots(slot.player) + ", infinitory: " + infinitorySlots.size() + infinitorySlots); // TODO remove
+				System.out.println(this.getClass().getSimpleName() + " difference in infinitorySlots and additional slots, additional: " + Utils.getAdditionalSlots(slot.player) + ", infinitory: " + infinitorySlots.size() + infinitorySlots); // TODO remove
 				//System.out.println("infinitory before: " + infinitorySlots.size() + infinitorySlots); // TODO remove
 
 				// add extra slots
@@ -249,6 +222,14 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 				//System.out.println("infinitory after: " + this.getInfinitorySlots().size() + this.getInfinitorySlots()); // TODO remove
 				// System.out.println("after add extra slots: "+this.slots.size()+", difference: "+(Utils.getAdditionalSlots(slot.player)-this.addedSlots.size())+", additional: "+Utils.getAdditionalSlots(slot.player)+", main size: "+this.mainSlots.size()+", infinitory: "+((IPlayerInventory)slot.player.getInventory()).getInfinitory()); // TODO remove
 			}
+		}
+	}
+	
+	@Inject(method = "setStackInSlot", at = @At(value = "INVOKE"), cancellable = true)
+	public void setStackInSlotCancelIfInvalidSlot(int slot, int revision, ItemStack stack, CallbackInfo ci) {
+		if (slot >= this.slots.size()) {
+			System.out.println("invalid slot: "+slot+" in "+this.slots.size()+", trace: "+Arrays.toString(Thread.currentThread().getStackTrace())); // TODO remove
+			ci.cancel();
 		}
 	}
 
@@ -349,9 +330,9 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 				if (slotIndex == ScreenHandler.EMPTY_SPACE_SLOT_INDEX) {
 					if (!((ScreenHandler) (Object) this).getCursorStack().isEmpty()) {
 						if (clickType == ClickType.LEFT) {
-							// only allow up to normal max stack count to be dropped at a time
+							// only allow up to n64 to be dropped at a time
 							ItemStack cursorStack = ((ScreenHandler) (Object) this).getCursorStack();
-							ItemStack dropStack = cursorStack.split(Math.min(cursorStack.getCount(), cursorStack.getMaxCount()));
+							ItemStack dropStack = cursorStack.split(Math.min(cursorStack.getCount(), 64));
 							player.dropItem(dropStack, true);
 							// ((ScreenHandler)(Object)this).setCursorStack(ItemStack.EMPTY);
 						} else {
@@ -403,8 +384,18 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 									v = clickType == ClickType.LEFT ? cursorStack.getCount() : 1;
 									((ScreenHandler) (Object) this).setCursorStack(slot4.insertStack(cursorStack, v));
 								} else if (cursorStack.getCount() <= slot4.getMaxItemCount(cursorStack)) {
-									slot4.setStack(cursorStack);
-									((ScreenHandler) (Object) this).setCursorStack(itemStack6);
+									// while sorting, instead of swapping, just insert cursorStack
+									if (slot4.inventory instanceof IPlayerInventory && 
+											((IPlayerInventory)slot4.inventory).getSortingType() != SortingType.NONE) {
+										ItemStack cursorStackCopy = cursorStack.copy();
+										ItemStack insertingStack = cursorStackCopy.split(clickType == ClickType.LEFT ? cursorStackCopy.getCount() : 1);
+										if (this.callInsertItem(insertingStack, 9, 36+Utils.getAdditionalSlots(player), false))
+											((ScreenHandler) (Object) this).setCursorStack(cursorStackCopy);
+									}
+									else {
+										slot4.setStack(cursorStack);
+										((ScreenHandler) (Object) this).setCursorStack(itemStack6);
+									}
 								}
 							} else if (ItemStack.canCombine(itemStack6, cursorStack)) {
 								Optional<ItemStack> optional2 = slot4.tryTakeStackRange(itemStack6.getCount(), /*itemStack7.getMaxCount()*/Config.maxStackSize - cursorStack.getCount(), player);
@@ -470,7 +461,7 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 					slot5 = (Slot) ((ScreenHandler) (Object) this).slots.get(slotIndex);
 					j = button == 0 ? 1 : slot5.getStack().getCount();
 					// only allow up to normal max count to be thrown at a time
-					itemStack6 = slot5.takeStackRange(j, slot5.getStack().getMaxCount()/*Config.maxStackSize*/, player);
+					itemStack6 = slot5.takeStackRange(j, 64/*Config.maxStackSize*/, player);
 					player.dropItem(itemStack6, true);
 				} else if (actionType == SlotActionType.PICKUP_ALL && slotIndex >= 0) {
 					slot5 = ((ScreenHandler) (Object) this).slots.get(slotIndex);
@@ -550,7 +541,7 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 		else
 			ci.setReturnValue(slot.getStack().getCount() + (allowOverflow ? 0 : stack.getCount()) <= stack.getMaxCount());
 	}
-	
+
 	@Inject(method = "updateSlotStacks", at = @At(value = "INVOKE"))
 	public void updateSlotStacksAddExtraSlots(int revision, List<ItemStack> stacks, ItemStack cursorStack, CallbackInfo ci) {}
 

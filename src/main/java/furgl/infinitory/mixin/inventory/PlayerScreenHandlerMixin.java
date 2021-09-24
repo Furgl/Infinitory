@@ -10,7 +10,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import furgl.infinitory.config.Config;
 import furgl.infinitory.impl.inventory.IPlayerInventory;
-import furgl.infinitory.impl.inventory.IScreenHandler;
 import furgl.infinitory.utils.Utils;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.mob.MobEntity;
@@ -36,9 +35,16 @@ public abstract class PlayerScreenHandlerMixin extends ScreenHandlerMixin implem
 	@Override
 	public void updateSlotStacksAddExtraSlots(int revision, List<ItemStack> stacks, ItemStack cursorStack, CallbackInfo ci) {
 		// add additional slots before reading from server, so everything reads in properly and no server-client desync
+		//System.out.println(stacks.size()+stacks.toString()); // TODO remove
 		if (stacks.size() > this.slots.size()) {
-			((IPlayerInventory)this.owner.getInventory()).setAdditionalSlots(stacks.size()-this.slots.size()); // update additional slots and main
-			((IScreenHandler)this).updateExtraSlots(); // add extra slots
+			System.out.println("updateSlotStacksAddExtraSlots before: stacksSize: "+stacks.size()+", slots size: "+this.slots.size()+", stacks: "+stacks); // TODO remove
+			System.out.println("infinitory slots before: "+this.getInfinitorySlots().size()+this.getInfinitorySlots()); // TODO remove
+			System.out.println("additional slots before: "+((IPlayerInventory)this.owner.getInventory()).getAdditionalSlots()); // TODO remove
+			//((IPlayerInventory)this.owner.getInventory()).setAdditionalSlots(stacks.size()-this.slots.size()+((IPlayerInventory)this.owner.getInventory()).getAdditionalSlots()); // update additional slots and main
+			//((IScreenHandler)this).updateExtraSlots(); // add extra slots
+			System.out.println("additional slots after: "+((IPlayerInventory)this.owner.getInventory()).getAdditionalSlots()); // TODO remove
+			System.out.println("infinitory slots after: "+this.getInfinitorySlots().size()+this.getInfinitorySlots()); // TODO remove
+			System.out.println("updateSlotStacksAddExtraSlots after: stacksSize: "+stacks.size()+", slots size: "+this.slots.size()); // TODO remove
 		}
 	}
 

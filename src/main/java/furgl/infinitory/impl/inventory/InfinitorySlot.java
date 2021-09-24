@@ -19,7 +19,7 @@ public class InfinitorySlot extends CreativeSlot {
 	public enum SlotType {
 		MAIN_NORMAL(true), MAIN_EXTRA(true), ARMOR(false), OFFHAND(false), HOTBAR(false), UNKNOWN(false);
 
-		boolean stackNonStackables;
+		public boolean stackNonStackables;
 		
 		private SlotType(boolean stackNonStackables) {
 			this.stackNonStackables = stackNonStackables;

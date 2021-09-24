@@ -13,7 +13,8 @@
   "items.ItemStackMixin",
   "network.PacketByteBufMixin",
   "network.ServerPlayNetworkHandlerMixin",
-  "network.ServerPlayerEntityMixin"
+  "network.ServerPlayerEntityMixin",
+  "network.ScreenHandlerSyncHandlerMixin"
       ],
   "client": [
   "render.HandledScreenMixin",

@@ -3,7 +3,6 @@ package furgl.infinitory.config;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 

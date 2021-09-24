@@ -1,7 +1,5 @@
 package furgl.infinitory.mixin.render;
 
-import java.util.HashMap;
-
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -12,7 +10,6 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import com.google.common.collect.Maps;
 import com.mojang.blaze3d.systems.RenderSystem;
 
 import furgl.infinitory.Infinitory;
@@ -79,7 +76,12 @@ public abstract class HandledScreenMixin<T extends ScreenHandler> extends Screen
 	@Inject(method = "init", at = @At(value = "TAIL"))
 	public void init(CallbackInfo ci) {
 		((ScreenAccessor)this).callAddDrawableChild(new TexturedButtonWidget(this.x + 204, this.height / 2 - 22, 20, 18, 0, 0, 19, RECIPE_BUTTON_TEXTURE, (button) -> {
-			ClientPlayNetworking.send(PacketManager.SORT_PACKET_ID, PacketByteBufs.empty());
+			ClientPlayNetworking.send(PacketManager.SORTING_TYPE_PACKET_ID, PacketByteBufs.empty());
+			((IPlayerInventory)this.playerInventory).setSortingType(((IPlayerInventory)this.playerInventory).getSortingType().getNextType());
+		}));
+		((ScreenAccessor)this).callAddDrawableChild(new TexturedButtonWidget(this.x + 244, this.height / 2 - 22, 20, 18, 0, 0, 19, RECIPE_BUTTON_TEXTURE, (button) -> {
+			ClientPlayNetworking.send(PacketManager.SORTING_ASCENDING_PACKET_ID, PacketByteBufs.empty());
+			((IPlayerInventory)this.playerInventory).setSortAscending(!((IPlayerInventory)this.playerInventory).getSortingAscending());
 		}));
 	}
 

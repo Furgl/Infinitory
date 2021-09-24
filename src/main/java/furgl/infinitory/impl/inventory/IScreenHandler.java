@@ -1,10 +1,6 @@
 package furgl.infinitory.impl.inventory;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.collection.DefaultedList;
 
 public interface IScreenHandler {
 
