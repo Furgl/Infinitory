@@ -1,7 +1,6 @@
 package furgl.infinitory.impl.lists;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.lang3.Validate;
@@ -50,7 +49,6 @@ public class MainDefaultedList extends DefaultedList<ItemStack> {
 	@Override
 	public ItemStack set(int index, ItemStack element) { 
 		if (index > 8) {
-			//System.out.println("set index:"+index+", stack:"+element+", before:"+this.delegate.get(index)+Arrays.toString(Thread.currentThread().getStackTrace())); // TODO remove
 			if (this.playerInventory.getSortingType() != SortingType.NONE)
 				this.playerInventory.needToSort();
 			this.playerInventory.needToUpdateInfinitorySize();
@@ -61,7 +59,6 @@ public class MainDefaultedList extends DefaultedList<ItemStack> {
 	@Override
 	public void add(int index, ItemStack element) {
 		if (index > 8) {
-			//System.out.println("add: "+Arrays.toString(Thread.currentThread().getStackTrace())); // TODO remove
 			if (this.playerInventory.getSortingType() != SortingType.NONE) 
 				this.playerInventory.needToSort();
 			this.playerInventory.needToUpdateInfinitorySize();

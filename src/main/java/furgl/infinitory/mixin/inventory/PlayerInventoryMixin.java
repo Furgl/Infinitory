@@ -21,16 +21,13 @@ import com.google.common.collect.Lists;
 import furgl.infinitory.config.Config;
 import furgl.infinitory.impl.inventory.IPlayerInventory;
 import furgl.infinitory.impl.inventory.IScreenHandler;
-import furgl.infinitory.impl.inventory.InfinitorySlot;
 import furgl.infinitory.impl.inventory.InfinitorySlot.SlotType;
 import furgl.infinitory.impl.inventory.SortingType;
 import furgl.infinitory.impl.lists.MainDefaultedList;
-import furgl.infinitory.impl.lists.SlotDefaultedList;
 import furgl.infinitory.impl.network.PacketManager;
+import furgl.infinitory.utils.Utils;
 import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.Inventory;
@@ -39,21 +36,12 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.network.PacketByteBuf;
-import net.minecraft.screen.ScreenHandler;
-import net.minecraft.screen.slot.Slot;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.math.MathHelper;
 
 @Mixin(PlayerInventory.class)
 public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventory {
-
-	/**FIXME
-	 *  Currently: updating size / sorting / everything on client and server
-	 *  Problems:
-	 *   - armor/offhand go blank for a second when picking up item in inventory
-	 *   - client spazzes out when spam clicking sometimes, mixes up inventory, and desyncs from server
-	 * */
 
 	@Unique
 	private SortingType sortingType;
@@ -92,10 +80,8 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 	// ========== SORTING ==========
 
 	@Unique
-	private void sort() { // TODO sort on server and send additional size via packet?
+	private void sort() { 
 		if (!this.player.world.isClient && this.getSortingType() != SortingType.NONE) {
-			System.out.println("sorting"); // TODO remove
-			//System.out.println("before sorting: "+this.main); // TODO remove
 			// combine all items into separate list (only inventory - not hotbar!)
 			ArrayList<ItemStack> list = Lists.newArrayList();
 			for (int i=9; i<this.main.size(); ++i) {
@@ -109,7 +95,6 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 								if (amountToAdd > this.getMaxCountPerStack() - stack.getCount()) 
 									amountToAdd = this.getMaxCountPerStack() - stack.getCount();
 								if (amountToAdd > 0) {
-									//System.out.println("combining "+amountToAdd+"x "+addingStack.getName().getString()); // TODO remove
 									stack.increment(amountToAdd);
 									addingStack.decrement(amountToAdd);
 									// addingStack empty - we can skip to the next item
@@ -119,7 +104,6 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 							}
 						}
 						// didn't find anything to stack with, add to list (don't worry about max size - should be handled already)
-						//System.out.println("adding "+addingStack.getCount()+"x "+addingStack.getName().getString()); // TODO remove
 						list.add(addingStack);
 					}
 			}
@@ -132,7 +116,6 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 					stack = list.get(i-9);
 				((MainDefaultedList)this.main).delegate.set(i, stack.copy());
 			}
-			//System.out.println("after sorting: "+this.main); // TODO remove
 		}
 	}
 
@@ -175,12 +158,10 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 		this.needToUpdateInfinitorySize();
 	}
 
-	/**Sync additional slots, sorting type, and sorting ascending server -> client
-	 * and TODO save values for player*/
+	/**Sync additional slots, sorting type, and sorting ascending server -> client*/
 	@Unique
 	@Override
 	public void syncInfinitoryValues() {
-		System.out.println("sync values: additionalSlots: "+this.additionalSlots+", sortingType: "+this.sortingType+", sortAscending: "+this.sortAscending); // TODO remove
 		// send packet server -> client
 		if (!this.player.world.isClient && this.player instanceof ServerPlayerEntity) {
 			PacketByteBuf buf = PacketByteBufs.create();
@@ -192,13 +173,20 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 	}
 
 	// ========== EXPANDING INVENTORY ==========
+	
+	@Inject(method = "clone(Lnet/minecraft/entity/player/PlayerInventory;)V", at = @At("INVOKE"))
+	public void cloneCopyInfinitoryValues(PlayerInventory other, CallbackInfo ci) {
+		// copy infinitory values when cloning
+		this.setAdditionalSlots(((IPlayerInventory)other).getAdditionalSlots());
+		this.setSortingType(((IPlayerInventory)other).getSortingType());
+		this.setSortAscending(((IPlayerInventory)other).getSortingAscending());
+	}
 
 	/**Recalculate additional slots based on main and infinitory sizes / fullness*/
 	@Unique
 	@Override
 	public void updateInfinitorySize() { 
 		if (!this.player.world.isClient) {
-			//System.out.println("main: "+this.main.size()+this.main); // TODO remove
 			// get indexes of first and last items
 			boolean isFull = true;
 			boolean isFullBeforeLastItem = true;
@@ -215,12 +203,9 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 				}
 				if (i >= this.main.size()-9 && !empty) 
 					lastRowEmpty = false;
-				//System.out.println("checking: i: "+i+", empty: "+empty+", stack: "+this.main.get(i)); // TODO remove
 			}
 			// index of last item rounded up to multiple of 9 additional slots
-			this.setAdditionalSlots(lastItem - 35 + (isFull || (isFullBeforeLastItem && lastRowEmpty && (lastItem+1) % 9 == 0) ? 9 : 0));
-
-			System.out.println("additional slots = "+this.additionalSlots+", lastItem: "+lastItem+", isFull: "+isFull+", isFullBeforeLastItem: "+isFullBeforeLastItem+", lastRowEmpty: "+lastRowEmpty); // TODO remove
+			this.setAdditionalSlots(lastItem - 35 + (((isFull || (isFullBeforeLastItem && lastRowEmpty)) && (lastItem+1) % 9 == 0) ? 9 : 0));
 		}
 	}
 
@@ -277,43 +262,6 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 		}
 		// reset difference in additional slots
 		this.differenceInAdditionalSlots = 0;
-		//this.debugPrint(); // TODO remove
-	}
-
-	@Unique // TODO remove
-	public void debugPrint() {
-		if (this.player.age % 50 == 0) {
-			ScreenHandler handler = this.player.currentScreenHandler;
-			List<Slot> slots = handler.slots;
-			String str = slots.size()+"";
-			for (int i=0; i<slots.size(); ++i)
-				System.out.println("(i:"+i+"):"+(slots.get(i) instanceof InfinitorySlot ? slots.get(i) : "["+slots.get(i)+",id:"+slots.get(i).id+",index:"+slots.get(i).getIndex()+",stack:"+slots.get(i).getStack()+",x:"+slots.get(i).x+",y:"+slots.get(i).y+"] "+slots.get(i).inventory)+",");
-			System.out.println("(Current) "+handler.getClass().getSimpleName()+": ");
-			System.out.println(" - slots: "+str);
-			System.out.println(" - infinitorySlots: "+((IScreenHandler)handler).getInfinitorySlots().size()+((IScreenHandler)handler).getInfinitorySlots());
-
-			handler = MinecraftClient.getInstance().currentScreen instanceof HandledScreen ? ((HandledScreen)MinecraftClient.getInstance().currentScreen).getScreenHandler() : null;
-			if (handler != null) {
-				slots = ((SlotDefaultedList)handler.slots).delegate;
-				str = slots.size()+"";
-				for (int i=0; i<slots.size(); ++i)
-					System.out.println("(i:"+i+"):"+(slots.get(i) instanceof InfinitorySlot ? slots.get(i) : "["+slots.get(i)+",id:"+slots.get(i).id+",index:"+slots.get(i).getIndex()+",stack:"+slots.get(i).getStack()+",x:"+slots.get(i).x+",y:"+slots.get(i).y+"] "+slots.get(i).inventory)+",");
-				System.out.println("(Client) "+handler.getClass().getSimpleName()+": ");
-				System.out.println(" - slots: "+str);
-				System.out.println(" - infinitorySlots: "+((IScreenHandler)handler).getInfinitorySlots().size()+((IScreenHandler)handler).getInfinitorySlots());
-			}
-
-			handler = this.player.playerScreenHandler;
-			slots = handler.slots;
-			str = slots.size()+"";
-			for (int i=0; i<slots.size(); ++i)
-				System.out.println("(i:"+i+"):"+(slots.get(i) instanceof InfinitorySlot ? slots.get(i) : "["+slots.get(i)+",id:"+slots.get(i).id+",index:"+slots.get(i).getIndex()+",stack:"+slots.get(i).getStack()+",x:"+slots.get(i).x+",y:"+slots.get(i).y+"] "+slots.get(i).inventory)+",");
-			System.out.println("(PlayerScreenHandler) "+handler.getClass().getSimpleName()+": ");
-			System.out.println(" - slots: "+str);
-			System.out.println(" - infinitorySlots: "+((IScreenHandler)handler).getInfinitorySlots().size()+((IScreenHandler)handler).getInfinitorySlots());
-
-			System.out.println("main: "+this.main.size()+this.main);
-		}
 	}
 
 	@Unique
@@ -325,8 +273,8 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 	@Unique
 	@Override
 	public void needToUpdateClient() {
-		//if (!this.player.world.isClient)
-		this.needToUpdateClient = true;
+		if (!this.player.world.isClient)
+			this.needToUpdateClient = true;
 	}
 
 	@Unique
@@ -422,10 +370,25 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 		itemStack.setCooldown(5);
 		ci.setReturnValue(i);
 	}
+	
+	@Inject(method = "markDirty()V", at = @At(value = "RETURN"))
+	public void markDirtySort(CallbackInfo ci) {
+		if (this.getSortingType() == SortingType.QUANTITY)
+			this.needToSort();
+	}
+
+	@Inject(method = "insertStack(ILnet/minecraft/item/ItemStack;)Z", at = @At(value = "RETURN"))
+	public void insertStackSort(int slot, ItemStack stack, CallbackInfoReturnable<Integer> ci) {
+		// sort by quantity
+		if (ci.getReturnValueZ() && this.getSortingType() == SortingType.QUANTITY)
+			this.needToSort();
+	}
 
 	@Inject(method = "removeStack(II)Lnet/minecraft/item/ItemStack;", at = @At(value = "RETURN"))
 	public void removeStackUpdateSize(int slot, int amount, CallbackInfoReturnable<ItemStack> ci) {
 		// need to update size manually after this is called bc this calls ItemStack#splitStack which won't trigger an update with ListeningDefaultedList
+		if (this.getSortingType() == SortingType.QUANTITY)
+			this.sort();
 		this.updateInfinitorySize();
 		this.updateExtraSlots();
 	}
@@ -446,6 +409,10 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 					if (slot >= 0 && slot < this.main.size()) 
 						this.main.set(slot, itemStack);
 				}
+			}
+			else if (nbtCompound.contains("InfinitorySortingType")) {
+				this.sortingType = Utils.getEnumFromString(SortingType.class, nbtCompound.getString("InfinitorySortingType")).orElse(SortingType.NONE);
+				this.sortAscending = nbtCompound.getBoolean("InfinitorySortingAscending");
 			}
 		}
 		this.needToUpdateInfinitorySize();
@@ -476,6 +443,11 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 				nbtList.add(nbt);
 			}
 		}
+		// write sorting values
+		NbtCompound nbt = new NbtCompound();
+		nbt.putString("InfinitorySortingType", this.getSortingType().name());
+		nbt.putBoolean("InfinitorySortingAscending", this.getSortingAscending());
+		nbtList.add(nbt);
 	}
 
 }

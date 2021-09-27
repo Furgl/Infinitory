@@ -5,8 +5,10 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Constant;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyConstant;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import furgl.infinitory.impl.inventory.ISlot;
 import furgl.infinitory.impl.render.IHandledScreen;
 import furgl.infinitory.utils.Utils;
 import net.fabricmc.api.EnvType;
@@ -15,8 +17,10 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ingame.AbstractInventoryScreen;
 import net.minecraft.client.gui.screen.ingame.CreativeInventoryScreen;
 import net.minecraft.client.gui.screen.ingame.CreativeInventoryScreen.CreativeScreenHandler;
+import net.minecraft.client.gui.screen.ingame.CreativeInventoryScreen.CreativeSlot;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemGroup;
+import net.minecraft.screen.slot.Slot;
 import net.minecraft.text.Text;
 
 @Environment(EnvType.CLIENT)
@@ -25,6 +29,17 @@ public abstract class CreativeInventoryScreenMixin extends AbstractInventoryScre
 
 	public CreativeInventoryScreenMixin(CreativeScreenHandler screenHandler, PlayerInventory playerInventory, Text text) {
 		super(screenHandler, playerInventory, text);
+	}
+	
+	@ModifyVariable(method = "onMouseClick(Lnet/minecraft/screen/slot/Slot;IILnet/minecraft/screen/slot/SlotActionType;)V", at = @At(value = "HEAD"))
+	public Slot onMouseClickChangeSlotToCreative(Slot slot) {
+		CreativeSlot newSlot = slot != null && slot.inventory instanceof PlayerInventory ? new CreativeSlot(slot, slot.getIndex(), slot.x, slot.y) : null;
+		if (newSlot != null) {
+			newSlot.id = slot.id;
+			((ISlot)newSlot).setIndex(slot.getIndex());
+			return newSlot;
+		}
+		return slot;
 	}
 
 	@Inject(method = "setSelectedTab", at = @At(value = "RETURN"))

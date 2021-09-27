@@ -38,6 +38,7 @@ import net.minecraft.screen.PlayerScreenHandler;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 
@@ -45,6 +46,7 @@ import net.minecraft.util.math.MathHelper;
 @Mixin(HandledScreen.class)
 public abstract class HandledScreenMixin<T extends ScreenHandler> extends Screen implements IHandledScreen {
 
+	@Unique
 	private static final Identifier RECIPE_BUTTON_TEXTURE = new Identifier("textures/gui/recipe_button.png");
 
 	@Shadow
@@ -63,6 +65,10 @@ public abstract class HandledScreenMixin<T extends ScreenHandler> extends Screen
 	private PlayerInventory playerInventory;
 	@Unique
 	private int prevMainSlotsSize;
+	@Unique
+	private TexturedButtonWidget buttonSortingType;
+	@Unique
+	private TexturedButtonWidget buttonSortingAscending;
 
 	protected HandledScreenMixin(Text title) {
 		super(title);
@@ -75,14 +81,25 @@ public abstract class HandledScreenMixin<T extends ScreenHandler> extends Screen
 
 	@Inject(method = "init", at = @At(value = "TAIL"))
 	public void init(CallbackInfo ci) {
-		((ScreenAccessor)this).callAddDrawableChild(new TexturedButtonWidget(this.x + 204, this.height / 2 - 22, 20, 18, 0, 0, 19, RECIPE_BUTTON_TEXTURE, (button) -> {
+		IPlayerInventory inv = ((IPlayerInventory)this.playerInventory);
+		// sorting type button
+		this.buttonSortingType = new TexturedButtonWidget(0, 0, 20, 18, 0, 0, 19, RECIPE_BUTTON_TEXTURE, 256, 256, (button) -> {
 			ClientPlayNetworking.send(PacketManager.SORTING_TYPE_PACKET_ID, PacketByteBufs.empty());
-			((IPlayerInventory)this.playerInventory).setSortingType(((IPlayerInventory)this.playerInventory).getSortingType().getNextType());
-		}));
-		((ScreenAccessor)this).callAddDrawableChild(new TexturedButtonWidget(this.x + 244, this.height / 2 - 22, 20, 18, 0, 0, 19, RECIPE_BUTTON_TEXTURE, (button) -> {
+			inv.setSortingType(inv.getSortingType().getNextType());
+		}, (button, matrices, mouseX, mouseY) -> {
+			this.renderTooltip(matrices, Text.of(Formatting.GRAY+"Sorting Type: "+Formatting.WHITE+inv.getSortingType().getName()), mouseX, mouseY);
+		}, Text.of(""));
+		this.addDrawableChild(buttonSortingType);
+		// sorting ascending button
+		this.buttonSortingAscending = new TexturedButtonWidget(0, 0, 20, 18, 0, 0, 19, RECIPE_BUTTON_TEXTURE, 256, 256, (button) -> {
 			ClientPlayNetworking.send(PacketManager.SORTING_ASCENDING_PACKET_ID, PacketByteBufs.empty());
 			((IPlayerInventory)this.playerInventory).setSortAscending(!((IPlayerInventory)this.playerInventory).getSortingAscending());
-		}));
+		}, (button, matrices, mouseX, mouseY) -> {
+			this.renderTooltip(matrices, Text.of(Formatting.GRAY+"Sorting Direction: "+Formatting.WHITE+(inv.getSortingAscending() ? "Ascending" : "Descending")), mouseX, mouseY);
+		}, Text.of(""));
+		this.addDrawableChild(buttonSortingAscending);
+		// reset button positions
+		this.resetButtons();
 	}
 
 	@Unique
@@ -128,11 +145,9 @@ public abstract class HandledScreenMixin<T extends ScreenHandler> extends Screen
 	@Override 
 	public void onMouseScroll(double mouseX, double mouseY, double amount) {
 		int increment = (this.playerInventory.main.size() - 36) / 9;
-		//System.out.println("increment: "+increment+", main: "+this.playerInventory.main.size()+this.playerInventory.main); // TODO remove
 		float scrollPosition = this.shouldShowScrollbar() ? (float)((double)Utils.getScrollPosition(this.playerInventory.player) - amount / (double)increment) : 0;
 		scrollPosition = MathHelper.clamp(scrollPosition, 0.0F, 1.0F);
 		Utils.setScrollPosition(this.playerInventory.player, scrollPosition);
-		//System.out.println("scrollPosition: "+scrollPosition); // TODO remove
 		this.scrollItems(scrollPosition);
 	}
 
@@ -188,14 +203,25 @@ public abstract class HandledScreenMixin<T extends ScreenHandler> extends Screen
 	}
 
 	@Unique
-	public boolean shouldShowScrollbar() {
+	public boolean shouldShowSortingButtons() {
 		boolean creativeScreen = ((Object)this) instanceof CreativeInventoryScreen;
 		boolean creativeInventory = creativeScreen && ((CreativeInventoryScreen)(Object)this).getSelectedTab() == ItemGroup.INVENTORY.getIndex();
-		return this.playerInventory.main.size() > 36 && (!creativeScreen || creativeInventory);
+		return !creativeScreen || creativeInventory;
+	}
+
+	@Unique
+	public boolean shouldShowScrollbar() {
+		return this.playerInventory.main.size() > 36 && this.shouldShowSortingButtons();
+	}
+
+	@Inject(method = "render", at = @At(value = "INVOKE"))
+	private void renderInvoke(MatrixStack matrices, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+		// reset button positions and visibility
+		resetButtons();
 	}
 
 	@Inject(method = "render", at = @At(value = "TAIL"))
-	private void render(MatrixStack matrices, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+	private void renderTail(MatrixStack matrices, int mouseX, int mouseY, float delta, CallbackInfo ci) {
 		// render scrollbar
 		if (this.shouldShowScrollbar()) {
 			RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
@@ -239,6 +265,17 @@ public abstract class HandledScreenMixin<T extends ScreenHandler> extends Screen
 			this.onMouseScroll(0, 0, this.prevMainSlotsSize > this.playerInventory.main.size() ? -1 : 1);
 			this.prevMainSlotsSize = this.playerInventory.main.size();
 		}
+	}
+
+	/**Reset sorting button positions and visibility (i.e. when recipe book is opened/closed)*/
+	private void resetButtons() {
+		int x = this.x + this.getScrollbarX() + (((Object)this) instanceof CreativeInventoryScreen || this.shouldShowScrollbar() ? 20 : 0);
+		int midY = this.y + this.getScrollbarMinY() + (this.getScrollbarMaxY() - this.getScrollbarMinY()) / 2 - this.buttonSortingType.getHeight() / 2;
+		this.buttonSortingType.setPos(x, midY - 10);
+		this.buttonSortingAscending.setPos(x, midY + 10);
+		boolean shouldShowButtons = this.shouldShowSortingButtons() && this.getScrollbarX() > 0;
+		this.buttonSortingType.visible = shouldShowButtons;
+		this.buttonSortingAscending.visible = shouldShowButtons;
 	}
 
 }

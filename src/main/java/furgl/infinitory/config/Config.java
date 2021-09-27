@@ -66,7 +66,6 @@ public class Config {
 				dropsOnDeath = 1;
 			else
 				dropsOnDeath = MathHelper.clamp(element.getAsInt(), 0, 2);
-
 		} 
 		catch (Exception e) {
 			e.printStackTrace();

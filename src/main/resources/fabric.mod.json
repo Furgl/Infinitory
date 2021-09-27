@@ -21,6 +21,9 @@
   "entrypoints": {
     "main": [
       "furgl.infinitory.Infinitory"
+    ],
+    "client": [
+    	"furgl.infinitory.Infinitory"
     ]
   },
   "mixins": [

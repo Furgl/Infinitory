@@ -29,7 +29,6 @@ import furgl.infinitory.impl.inventory.IScreenHandler;
 import furgl.infinitory.impl.inventory.InfinitorySlot;
 import furgl.infinitory.impl.lists.SlotDefaultedList;
 import furgl.infinitory.utils.Utils;
-import net.minecraft.client.gui.screen.ingame.CreativeInventoryScreen.CreativeScreenHandler;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.StackReference;

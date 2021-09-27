@@ -27,10 +27,9 @@ public interface IPlayerInventory {
 	public void setSortAscending(boolean sortAscending);
 
 	/**Recalculate additional slots based on main and infinitory sizes / fullness*/
-	void updateInfinitorySize();
+	public void updateInfinitorySize();
 
-	/**Sync additional slots, sorting type, and sorting ascending server -> client
-	 * and TODO save values for player*/
-	void syncInfinitoryValues();
+	/**Sync additional slots, sorting type, and sorting ascending server -> client*/
+	public void syncInfinitoryValues();
 	
 }

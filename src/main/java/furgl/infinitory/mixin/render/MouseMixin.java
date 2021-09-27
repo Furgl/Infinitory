@@ -9,9 +9,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
 import furgl.infinitory.impl.render.IHandledScreen;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.Mouse;
 
+@Environment(EnvType.CLIENT)
 @Mixin(Mouse.class)
 public abstract class MouseMixin {
 
