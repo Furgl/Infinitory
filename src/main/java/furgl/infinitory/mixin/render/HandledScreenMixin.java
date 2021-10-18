@@ -19,6 +19,7 @@ import furgl.infinitory.impl.inventory.IScreenHandler;
 import furgl.infinitory.impl.inventory.InfinitorySlot;
 import furgl.infinitory.impl.network.PacketManager;
 import furgl.infinitory.impl.render.IHandledScreen;
+import furgl.infinitory.impl.render.InfinitoryTexturedButtonWidget;
 import furgl.infinitory.utils.Utils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -38,6 +39,7 @@ import net.minecraft.screen.PlayerScreenHandler;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.text.Text;
+import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
@@ -46,9 +48,6 @@ import net.minecraft.util.math.MathHelper;
 @Mixin(HandledScreen.class)
 public abstract class HandledScreenMixin<T extends ScreenHandler> extends Screen implements IHandledScreen {
 
-	@Unique
-	private static final Identifier RECIPE_BUTTON_TEXTURE = new Identifier("textures/gui/recipe_button.png");
-
 	@Shadow
 	protected int x;
 	@Shadow
@@ -56,9 +55,11 @@ public abstract class HandledScreenMixin<T extends ScreenHandler> extends Screen
 	@Shadow @Final
 	protected T handler;
 	@Unique
+	private static final Identifier VANILLA_BACKGROUND = new Identifier("textures/gui/container/creative_inventory/tab_items.png");
+	@Unique
 	private static final Identifier VANILLA_SCROLLBAR = new Identifier("textures/gui/container/creative_inventory/tabs.png");
 	@Unique
-	private static final Identifier SCROLLBAR_BACKGROUND = new Identifier(Infinitory.MODID, "textures/gui/container/inventory/inventory.png");
+	private static final Identifier TEXTURES = new Identifier(Infinitory.MODID, "textures/gui/container/inventory/inventory.png");
 	@Unique
 	private boolean scrolling;
 	@Unique
@@ -68,7 +69,7 @@ public abstract class HandledScreenMixin<T extends ScreenHandler> extends Screen
 	@Unique
 	private TexturedButtonWidget buttonSortingType;
 	@Unique
-	private TexturedButtonWidget buttonSortingAscending;
+	private TexturedButtonWidget buttonSortingDirection;
 
 	protected HandledScreenMixin(Text title) {
 		super(title);
@@ -83,21 +84,33 @@ public abstract class HandledScreenMixin<T extends ScreenHandler> extends Screen
 	public void init(CallbackInfo ci) {
 		IPlayerInventory inv = ((IPlayerInventory)this.playerInventory);
 		// sorting type button
-		this.buttonSortingType = new TexturedButtonWidget(0, 0, 20, 18, 0, 0, 19, RECIPE_BUTTON_TEXTURE, 256, 256, (button) -> {
+		this.buttonSortingType = new InfinitoryTexturedButtonWidget(0, 0, 16, 16, 1, inv.getSortingType().ordinal() * 17+1, 100, TEXTURES, 256, 256, (button) -> {
 			ClientPlayNetworking.send(PacketManager.SORTING_TYPE_PACKET_ID, PacketByteBufs.empty());
 			inv.setSortingType(inv.getSortingType().getNextType());
+			((InfinitoryTexturedButtonWidget)button).v = inv.getSortingType().ordinal() * 17+1;
 		}, (button, matrices, mouseX, mouseY) -> {
-			this.renderTooltip(matrices, Text.of(Formatting.GRAY+"Sorting Type: "+Formatting.WHITE+inv.getSortingType().getName()), mouseX, mouseY);
+			if (mouseX >= button.x && mouseX <= button.x+button.getWidth() &&
+					mouseY >= button.y && mouseY <= button.y+button.getHeight())
+				this.renderTooltip(matrices, 
+						new TranslatableText("button.sortingType").append(": ").formatted(Formatting.GRAY)
+						.append(new TranslatableText("button.sortingType."+inv.getSortingType().name().toLowerCase()).formatted(Formatting.WHITE)), 
+						mouseX, mouseY);
 		}, Text.of(""));
 		this.addDrawableChild(buttonSortingType);
 		// sorting ascending button
-		this.buttonSortingAscending = new TexturedButtonWidget(0, 0, 20, 18, 0, 0, 19, RECIPE_BUTTON_TEXTURE, 256, 256, (button) -> {
+		this.buttonSortingDirection = new InfinitoryTexturedButtonWidget(0, 0, 16, 16, 18, inv.getSortingAscending() ? 18 : 1, 100, TEXTURES, 256, 256, (button) -> {
 			ClientPlayNetworking.send(PacketManager.SORTING_ASCENDING_PACKET_ID, PacketByteBufs.empty());
-			((IPlayerInventory)this.playerInventory).setSortAscending(!((IPlayerInventory)this.playerInventory).getSortingAscending());
+			inv.setSortAscending(!((IPlayerInventory)this.playerInventory).getSortingAscending());
+			((InfinitoryTexturedButtonWidget)button).v = inv.getSortingAscending() ? 18 : 1;
 		}, (button, matrices, mouseX, mouseY) -> {
-			this.renderTooltip(matrices, Text.of(Formatting.GRAY+"Sorting Direction: "+Formatting.WHITE+(inv.getSortingAscending() ? "Ascending" : "Descending")), mouseX, mouseY);
+			if (mouseX >= button.x && mouseX <= button.x+button.getWidth() &&
+					mouseY >= button.y && mouseY <= button.y+button.getHeight())
+				this.renderTooltip(matrices, 
+						new TranslatableText("button.sortingDirection").append(": ").formatted(Formatting.GRAY)
+						.append(new TranslatableText("button.sortingDirection."+(inv.getSortingAscending() ? "ascending" : "descending")).formatted(Formatting.WHITE)), 
+						mouseX, mouseY);
 		}, Text.of(""));
-		this.addDrawableChild(buttonSortingAscending);
+		this.addDrawableChild(buttonSortingDirection);
 		// reset button positions
 		this.resetButtons();
 	}
@@ -206,7 +219,7 @@ public abstract class HandledScreenMixin<T extends ScreenHandler> extends Screen
 	public boolean shouldShowSortingButtons() {
 		boolean creativeScreen = ((Object)this) instanceof CreativeInventoryScreen;
 		boolean creativeInventory = creativeScreen && ((CreativeInventoryScreen)(Object)this).getSelectedTab() == ItemGroup.INVENTORY.getIndex();
-		return !creativeScreen || creativeInventory;
+		return (!creativeScreen || creativeInventory) && this.getScrollbarX() > 0;
 	}
 
 	@Unique
@@ -230,12 +243,19 @@ public abstract class HandledScreenMixin<T extends ScreenHandler> extends Screen
 			int minY = this.y + this.getScrollbarMinY();
 			int maxY = this.y + this.getScrollbarMaxY();
 			boolean creativeScreen = ((Object)this) instanceof CreativeInventoryScreen;
-			// background
-			RenderSystem.setShaderTexture(0, SCROLLBAR_BACKGROUND);
-			if (creativeScreen) // only draw inside for creative screen
-				this.drawTexture(matrices, x-7, minY-4, 0, 3, 23, 59);
-			else // draw full
-				this.drawTexture(matrices, x-7, minY-7, 0, 0, 23, 66);
+			// draw slider background using vanilla textures
+			RenderSystem.setShaderTexture(0, VANILLA_BACKGROUND);
+			if (creativeScreen) {// only draw inside for creative screen				
+				this.drawTexture(matrices, x-5, minY-1, 174, 17, 14, 50); // top half
+				this.drawTexture(matrices, x-5, minY+10, 174, 86, 14, 43); // bottom half
+			}
+			else { // draw full
+				this.drawTexture(matrices, x-5, minY-7, 174, 0, 21, 10); // top half
+				this.drawTexture(matrices, x-5, minY+10, 174, 86, 21, 50); // bottom half
+				this.drawTexture(matrices, x-5, minY-2, 174, 16, 21, 15); // scrollbar top
+				this.drawTexture(matrices, x-5, minY-7, 192, 3, 2, 1); // fix outline top
+				this.drawTexture(matrices, x-5, minY+59, 192, 3, 2, 1); // fix outline bottom
+			}
 			// foreground
 			RenderSystem.setShaderTexture(0, VANILLA_SCROLLBAR);
 			this.drawTexture(matrices, x-4, minY + (int)((float)(maxY - minY - 17) * Utils.getScrollPosition(this.playerInventory.player)), 232, 0, 12, 15);
@@ -272,10 +292,10 @@ public abstract class HandledScreenMixin<T extends ScreenHandler> extends Screen
 		int x = this.x + this.getScrollbarX() + (((Object)this) instanceof CreativeInventoryScreen || this.shouldShowScrollbar() ? 20 : 0);
 		int midY = this.y + this.getScrollbarMinY() + (this.getScrollbarMaxY() - this.getScrollbarMinY()) / 2 - this.buttonSortingType.getHeight() / 2;
 		this.buttonSortingType.setPos(x, midY - 10);
-		this.buttonSortingAscending.setPos(x, midY + 10);
-		boolean shouldShowButtons = this.shouldShowSortingButtons() && this.getScrollbarX() > 0;
+		this.buttonSortingDirection.setPos(x, midY + 10);
+		boolean shouldShowButtons = this.shouldShowSortingButtons();
 		this.buttonSortingType.visible = shouldShowButtons;
-		this.buttonSortingAscending.visible = shouldShowButtons;
+		this.buttonSortingDirection.visible = shouldShowButtons;
 	}
 
 }

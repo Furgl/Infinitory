@@ -6,20 +6,20 @@
   "mixins": [
   	"inventory.PlayerInventoryMixin",
   	"inventory.PlayerScreenHandlerMixin",
-  	"inventory.ScreenHandlerAccessor",
   	"inventory.ScreenHandlerMixin",
-  	"inventory.SlotAccessor",
-    "inventory.SlotMixin",
+  	"inventory.SlotMixin",
+  	"accessors.SlotAccessor",
+  	"accessors.ScreenHandlerAccessor",
   	"items.ItemStackMixin",
   	"network.PacketByteBufMixin",
   	"network.ServerPlayNetworkHandlerMixin",
   	"network.ServerPlayerEntityMixin"
     ],
   "client": [
-  	"render.HandledScreenMixin",
   	"items.ItemRendererMixin",
   	"render.CreativeInventoryScreenMixin",
   	"render.MouseMixin",
+  	"render.HandledScreenMixin",
   	"network.MinecraftClientMixin"
     ],
   "injectors": {

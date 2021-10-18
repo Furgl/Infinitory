@@ -6,6 +6,7 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 
 import furgl.infinitory.config.Config;
+import furgl.infinitory.mixin.accessors.ScreenHandlerAccessor;
 import furgl.infinitory.utils.Utils;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.mob.MobEntity;
@@ -32,7 +33,7 @@ public abstract class PlayerScreenHandlerMixin extends ScreenHandlerMixin implem
 	 */
 	@Unique
 	@Override
-	protected ItemStack transferSlotCustom(PlayerEntity player, int index) {
+	protected ItemStack transferSlotCustom(PlayerEntity player, int index) {		
 		ItemStack itemStack = ItemStack.EMPTY;
 		Slot slot = (Slot)((PlayerScreenHandler)(Object)this).slots.get(index);
 		if (slot != null && slot.hasStack()) {
@@ -73,7 +74,7 @@ public abstract class PlayerScreenHandlerMixin extends ScreenHandlerMixin implem
 			} 
 			// hotbar -> main inventory
 			else if (index >= 36+Utils.getAdditionalSlots(player) && index < 45+Utils.getAdditionalSlots(player)) {
-				if (!this.callInsertItem(itemStack2, 9, 36+Utils.getAdditionalSlots(player), false)) 
+				if (!this.callInsertItem(itemStack2, 9, 36/*+Utils.getAdditionalSlots(player)*/, false)) // ScreenHandlerMixin#insertItem adjusts for additional slots (fixes dupe)
 					return ItemStack.EMPTY;
 			} 
 			// anywhere -> anywhere

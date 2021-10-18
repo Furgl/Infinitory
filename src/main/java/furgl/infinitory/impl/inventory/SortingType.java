@@ -8,8 +8,8 @@ import net.minecraft.item.ItemStack;
 
 public enum SortingType {
 
-	NONE("None", null, null), 
-	NAME("Name", new Comparator<ItemStack>() {
+	NONE(null, null), 
+	NAME(new Comparator<ItemStack>() {
 		@Override
 		public int compare(ItemStack i1, ItemStack i2) {
 			return i1.getName().getString().compareTo(i2.getName().getString());
@@ -20,7 +20,7 @@ public enum SortingType {
 			return i2.getName().getString().compareTo(i1.getName().getString());
 		}
 	}), 
-	QUANTITY("Quantity", new Comparator<ItemStack>() {
+	QUANTITY(new Comparator<ItemStack>() {
 		@Override
 		public int compare(ItemStack i1, ItemStack i2) {
 			int ret = Integer.compare(i1.getCount(), i2.getCount());
@@ -37,7 +37,7 @@ public enum SortingType {
 			return ret;
 		}
 	}),
-	ID("ID", new Comparator<ItemStack>() {
+	ID(new Comparator<ItemStack>() {
 		@Override
 		public int compare(ItemStack i1, ItemStack i2) {
 			int ret = Integer.compare(Item.getRawId(i1.getItem()), Item.getRawId(i2.getItem()));
@@ -55,12 +55,10 @@ public enum SortingType {
 		}
 	});
 
-	private String name;
 	private Comparator<ItemStack> comparatorAscending;
 	private Comparator<ItemStack> comparatorDescending;
 
-	private SortingType(String name, Comparator<ItemStack> comparatorAscending, Comparator<ItemStack> comparatorDescending) {
-		this.name = name;
+	private SortingType(Comparator<ItemStack> comparatorAscending, Comparator<ItemStack> comparatorDescending) {
 		this.comparatorAscending = comparatorAscending;
 		this.comparatorDescending = comparatorDescending;
 	}
@@ -77,10 +75,6 @@ public enum SortingType {
 		if (ordinal >= SortingType.values().length)
 			ordinal = 0;
 		return SortingType.values()[ordinal];
-	}
-
-	public String getName() {
-		return this.name;
 	}
 
 }

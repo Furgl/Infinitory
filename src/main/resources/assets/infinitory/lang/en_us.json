@@ -1,3 +1,10 @@
 {
-	
+	"button.sortingType": "Sorting Type",
+	"button.sortingType.none": "None",
+	"button.sortingType.name": "Name",
+	"button.sortingType.quantity": "Quantity",
+	"button.sortingType.id": "ID",
+	"button.sortingDirection": "Sorting Direction",
+	"button.sortingDirection.ascending": "Ascending",
+	"button.sortingDirection.descending": "Descending"
 }

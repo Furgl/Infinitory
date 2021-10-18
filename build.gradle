@@ -7,24 +7,31 @@ sourceCompatibility = JavaVersion.VERSION_16
 targetCompatibility = JavaVersion.VERSION_16
 
 archivesBaseName = "Infinitory"
-version = "Fabric-1.17.1-1.0.0"
+version = "Fabric-1.17.1-1.1.0"
 group ="furgl.infinitory"
 
 repositories {
-	// Add repositories to retrieve artifacts from in here.
-	// You should only use this when depending on other mods because
-	// Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
-	// See https://docs.gradle.org/current/userguide/declaring_repositories.html
-	// for more information about repositories.
+	// repositiories for Trinkets
+	maven {
+		name = "TerraformersMC"
+		url = "https://maven.terraformersmc.com/"
+	}
+	maven {
+		name = "Ladysnake Libs"
+		url = "https://ladysnake.jfrog.io/artifactory/mods"
+	}
 }
 
 dependencies {
     minecraft "com.mojang:minecraft:1.17.1"
-    mappings "net.fabricmc:yarn:1.17.1+build.1:v2"
-    modImplementation "net.fabricmc:fabric-loader:0.11.6"
+    mappings "net.fabricmc:yarn:1.17.1+build.61:v2"
+    modImplementation "net.fabricmc:fabric-loader:0.12.2"
             
     // Fabric api
-    modImplementation "net.fabricmc.fabric-api:fabric-api:0.36.1+1.17"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:0.41.0+1.17"
+    
+    // Trinkets
+    modCompileOnly "dev.emi:trinkets:3.0.4"
 
 	// PSA: Some older mods, compiled on Loom 0.2.1, might have outdated Maven POMs.
 	// You may need to force-disable transitiveness on them.

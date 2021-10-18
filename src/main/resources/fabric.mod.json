@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
   "id": "infinitory",
-  "version": "1.0.0",
+  "version": "1.1.0",
 
   "name": "Infinitory",
-  "description": "Infinite inventory!",
+  "description": "Infinite inventory and stack size!",
   "authors": [
     "Furgl"
   ],
   "contact": {
-    "homepage": "https://www.curseforge.com/minecraft/mc-mods/improved-hoes",
-    "issues": "https://github.com/Furgl/ImprovedHoes/issues",
-    "sources": "https://github.com/Furgl/ImprovedHoes"
+    "homepage": "https://www.curseforge.com/minecraft/mc-mods/infinitory",
+    "issues": "https://github.com/Furgl/Infinitory/issues",
+    "sources": "https://github.com/Furgl/Infinitory"
   },
 
   "license": "The MIT License (MIT)",

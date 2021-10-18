@@ -1,7 +1,6 @@
 package furgl.infinitory.mixin.inventory;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
@@ -21,6 +20,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import com.google.common.collect.Lists;
 
+import furgl.infinitory.Infinitory;
 import furgl.infinitory.config.Config;
 import furgl.infinitory.impl.inventory.IPlayerInventory;
 import furgl.infinitory.impl.inventory.IScreenHandler;
@@ -29,6 +29,8 @@ import furgl.infinitory.impl.inventory.InfinitorySlot;
 import furgl.infinitory.impl.inventory.InfinitorySlot.SlotType;
 import furgl.infinitory.impl.inventory.SortingType;
 import furgl.infinitory.impl.lists.SlotDefaultedList;
+import furgl.infinitory.mixin.accessors.ScreenHandlerAccessor;
+import furgl.infinitory.mixin.accessors.SlotAccessor;
 import furgl.infinitory.utils.Utils;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
@@ -166,6 +168,8 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 			this.scrollbarMaxY = y + 54;
 			// if current amount of slots doesn't match additionalSlots
 			if (infinitorySlots.size() >= 27 && (infinitorySlots.size() - 27) != Utils.getAdditionalSlots(slot.player)) {
+				int difference = Utils.getAdditionalSlots(slot.player) - (infinitorySlots.size() - 27);
+
 				// add extra slots
 				for (int i = infinitorySlots.size() - 27; i < Utils.getAdditionalSlots(slot.player); ++i) {
 					InfinitorySlot addSlot = new InfinitorySlot((PlayerInventory) slot.inventory, slot.id + 27 + i, 36 + i/*41+i*/, x + (i % 9) * 18, y + (i / 9 + 3) * 18, slot.getBackgroundSprite(), SlotType.MAIN_EXTRA);
@@ -175,21 +179,25 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 				// remove extra slots
 				for (int i = infinitorySlots.size() - 27; i > Utils.getAdditionalSlots(slot.player); --i)
 					this.removeSlot(infinitorySlots.get(27 + i - 1));
+
+				// adjust Trinkets slot IDs
+				if (Infinitory.trinketsDependency != null)
+					Infinitory.trinketsDependency.adjustTrinketSlots((ScreenHandler)(Object)this, difference, slot);
 			}
 		}
 	}
 
 	@Inject(method = "setStackInSlot", at = @At(value = "INVOKE"), cancellable = true)
 	public void setStackInSlotCancelIfInvalidSlot(int slot, int revision, ItemStack stack, CallbackInfo ci) {
-		if (slot >= this.slots.size()) {
-			System.out.println("invalid slot: " + slot + " in " + this.slots.size() + ", trace: " + Arrays.toString(Thread.currentThread().getStackTrace())); // TODO remove
+		if (slot >= this.slots.size()) 
 			ci.cancel();
-		}
 	}
 
-	/** Copied entire method and edited by the comments because there are so many changes */
+	/** Copied entire method and edited by the comments because there are so many changes 
+	 * @author Furgl
+	 * @reason Because there are so many changes*/
 	@Overwrite
-	public void internalOnSlotClick(int slotIndex, int button, SlotActionType actionType, PlayerEntity player) {
+	private void internalOnSlotClick(int slotIndex, int button, SlotActionType actionType, PlayerEntity player) {
 		// invalid index (may happen with changing inventory size)
 		if (slotIndex > ((ScreenHandler) (Object) this).slots.size() - 1)
 			return;
@@ -304,8 +312,7 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 						return;
 					}
 
-					for (itemStack6 = this.transferSlotCustom(player, slotIndex); !itemStack6.isEmpty() && ItemStack.areItemsEqualIgnoreDamage(slot4.getStack(), itemStack6); itemStack6 = this.transferSlotCustom(player, slotIndex)) {
-					}
+					for (itemStack6 = this.transferSlotCustom(player, slotIndex); !itemStack6.isEmpty() && ItemStack.areItemsEqualIgnoreDamage(slot4.getStack(), itemStack6); itemStack6 = this.transferSlotCustom(player, slotIndex)) {}
 				}
 				// normal click
 				else {
@@ -512,11 +519,10 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 				itemStack = slot2.getStack();
 				if (itemStack.isEmpty() && slot2.canInsert(stack)) {	  
 					/** Only insert what slot allows (i.e. moving stack of non-stackables from main inventory to hotbar) */
-					if (stack.getCount() > slot2.getMaxItemCount(stack)) { // MC just uses slot2.getMaxItemCount()
+					if (stack.getCount() > slot2.getMaxItemCount(stack)) // MC just uses slot2.getMaxItemCount()
 						slot2.setStack(stack.split(slot2.getMaxItemCount(stack))); // MC just uses slot2.getMaxItemCount()
-					} else {
+					else 
 						slot2.setStack(stack.split(stack.getCount()));
-					}
 
 					slot2.markDirty();
 					bl = true;
