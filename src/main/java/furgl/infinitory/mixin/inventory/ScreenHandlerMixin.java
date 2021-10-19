@@ -167,7 +167,7 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 			this.scrollbarMinY = y;
 			this.scrollbarMaxY = y + 54;
 			// if current amount of slots doesn't match additionalSlots
-			if (infinitorySlots.size() >= 27 && (infinitorySlots.size() - 27) != Utils.getAdditionalSlots(slot.player)) {
+			if (infinitorySlots.size() >= 27 && (infinitorySlots.size() - 27) != Utils.getAdditionalSlots(slot.player)) {				
 				int difference = Utils.getAdditionalSlots(slot.player) - (infinitorySlots.size() - 27);
 
 				// add extra slots
@@ -197,7 +197,7 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 	 * @author Furgl
 	 * @reason Because there are so many changes*/
 	@Overwrite
-	private void internalOnSlotClick(int slotIndex, int button, SlotActionType actionType, PlayerEntity player) {
+	protected void internalOnSlotClick(int slotIndex, int button, SlotActionType actionType, PlayerEntity player) {
 		// invalid index (may happen with changing inventory size)
 		if (slotIndex > ((ScreenHandler) (Object) this).slots.size() - 1)
 			return;

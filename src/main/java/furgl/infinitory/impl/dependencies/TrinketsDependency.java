@@ -47,7 +47,8 @@ public class TrinketsDependency implements Dependency {
 					entry.getValue().write(nbt);
 					NbtCompound innerNbt = nbt.getCompound("GroupData");
 					int slotId = innerNbt.getInt("SlotId");
-					if (slotId != -1) {
+					// not -1 and past main inventory
+					if (slotId != -1 && slotId > 35) {
 						int newSlotId; // newSlotId = original slot id + additional slots
 						// get original slot id
 						if (trinketSlotGroupIds.containsKey(entry.getKey()))

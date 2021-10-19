@@ -15,10 +15,15 @@ import net.fabricmc.api.ModInitializer;
 public class Infinitory implements ModInitializer, ClientModInitializer {
 	 	
 	/**
-	 * Updated the inventory button textures
-	 * Fixed button tooltips and the scrollbar rendering where they shouldn't when other inventory menus are open
-	 * Fixed compatibility issues with the Trinkets mod
-	 * Fixed an item dupe with shift-clicking from the hotbar
+	 * Fixed an issue causing Infinitory to fail to load sometimes
+	 * Fixed an issue causing some Trinket slots to be offset when the inventory expands
+	 * 
+	 * TEST charm mod?
+	 * FIXME creative inventory fucked with Charms?
+	 * 
+	 * TODO 3x3 crafting grid
+	 * TODO expand inventory
+	 * TODO search bar
 	 */
 	
 	public static final String MODNAME = "Infinitory";
