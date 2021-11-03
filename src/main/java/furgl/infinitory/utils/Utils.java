@@ -8,11 +8,22 @@ import java.util.UUID;
 
 import com.google.common.collect.Maps;
 
+import furgl.infinitory.Infinitory;
 import furgl.infinitory.impl.inventory.IPlayerInventory;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.util.Identifier;
+import net.minecraft.util.Pair;
 
 public class Utils {
 
+	public static final Identifier VANILLA_INVENTORY = new Identifier("textures/gui/container/inventory.png");
+	public static final Identifier VANILLA_BACKGROUND = new Identifier("textures/gui/container/creative_inventory/tab_item_search.png");
+	public static final Identifier VANILLA_SCROLLBAR = new Identifier("textures/gui/container/creative_inventory/tabs.png");
+	public static final Identifier TEXTURES = new Identifier(Infinitory.MODID, "textures/gui/container/inventory/inventory.png");
+	/**Coords of 3x3 top-left crafting input slot*/
+	public static final Pair<Integer, Integer> CRAFTING_SLOTS_INPUT = new Pair(98, 6);
+	/**Coords of 3x3 crafting output slot*/
+	public static final Pair<Integer, Integer> CRAFTING_SLOTS_OUTPUT = new Pair(172, 24);
 	private static HashMap<UUID, Float> scrollPositions = Maps.newHashMap();
 
 	/** Gets String from double without trailing zeroes */ 

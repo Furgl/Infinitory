@@ -6,5 +6,19 @@
 	"button.sortingType.id": "ID",
 	"button.sortingDirection": "Sorting Direction",
 	"button.sortingDirection.ascending": "Ascending",
-	"button.sortingDirection.descending": "Descending"
+	"button.sortingDirection.descending": "Descending",
+	"config.infinitory.name": "Infinitory",
+	"config.infinitory.option": "Option %s",
+	"config.infinitory.category.general": "General",
+	"config.infinitory.option.maxItemStackSize": "Max Item Stack Size",
+	"config.infinitory.option.maxItemStackSize.tooltip": "Max size that items can stack up to in the player inventory",
+	"config.infinitory.option.maxExtraInventorySlots": "Max Extra Inventory Slots",
+	"config.infinitory.option.maxExtraInventorySlots.tooltip": "Max extra slots that can be added to the player inventory",
+	"config.infinitory.option.itemsToDropOnDeath": "Items to Drop on Death",
+	"config.infinitory.option.itemsToDropOnDeath.tooltip": "Items from the player inventory to drop on death when keepInventory = false",
+	"config.infinitory.option.itemsToDropOnDeath.0": "Drop everything",
+	"config.infinitory.option.itemsToDropOnDeath.1": "Drop up to a stack of each item",
+	"config.infinitory.option.itemsToDropOnDeath.2": "Drop up to a stack of each item in your hotbar, offhand, and armor slots",
+	"config.infinitory.option.expandedCrafting": "3x3 Crafting Area",
+	"config.infinitory.option.expandedCrafting.tooltip": "Should the crafting area in the player inventory be 3x3?"
 }

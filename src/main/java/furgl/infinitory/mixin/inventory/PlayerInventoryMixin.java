@@ -19,6 +19,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
 import furgl.infinitory.config.Config;
+import furgl.infinitory.config.Config.DropsOnDeath;
 import furgl.infinitory.impl.inventory.IPlayerInventory;
 import furgl.infinitory.impl.inventory.IScreenHandler;
 import furgl.infinitory.impl.inventory.InfinitorySlot.SlotType;
@@ -173,7 +174,7 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 	}
 
 	// ========== EXPANDING INVENTORY ==========
-	
+
 	@Inject(method = "clone(Lnet/minecraft/entity/player/PlayerInventory;)V", at = @At("INVOKE"))
 	public void cloneCopyInfinitoryValues(PlayerInventory other, CallbackInfo ci) {
 		// copy infinitory values when cloning
@@ -300,7 +301,7 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 	@Inject(method = "dropAll", at = @At("HEAD"), cancellable = true)
 	public void dropAll(CallbackInfo ci) {
 		// up to stack of everything
-		if (Config.dropsOnDeath == 1) {
+		if (Config.dropsOnDeath == DropsOnDeath.UP_TO_STACK) {
 			for (List<ItemStack> list : this.combinedInventory) 
 				for (ItemStack stack : list) 
 					if (!stack.isEmpty()) 
@@ -308,7 +309,7 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 			ci.cancel();
 		}
 		// up to stack of hotbar and armor
-		else if (Config.dropsOnDeath == 2) {
+		else if (Config.dropsOnDeath == DropsOnDeath.UP_TO_STACK_LIMITED) {
 			List<ItemStack> list = Lists.newArrayList();
 			list.addAll(this.offHand);
 			list.addAll(this.armor);
@@ -370,7 +371,7 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 		itemStack.setCooldown(5);
 		ci.setReturnValue(i);
 	}
-	
+
 	@Inject(method = "markDirty()V", at = @At(value = "RETURN"))
 	public void markDirtySort(CallbackInfo ci) {
 		if (this.getSortingType() == SortingType.QUANTITY)

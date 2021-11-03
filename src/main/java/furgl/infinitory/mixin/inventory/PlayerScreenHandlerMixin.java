@@ -2,25 +2,44 @@ package furgl.infinitory.mixin.inventory;
 
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 
 import furgl.infinitory.config.Config;
+import furgl.infinitory.impl.inventory.IPlayerScreenHandler;
 import furgl.infinitory.mixin.accessors.ScreenHandlerAccessor;
 import furgl.infinitory.utils.Utils;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.inventory.CraftingInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.screen.PlayerScreenHandler;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.Slot;
 
 @Mixin(PlayerScreenHandler.class)
-public abstract class PlayerScreenHandlerMixin extends ScreenHandlerMixin implements ScreenHandlerAccessor {
+public abstract class PlayerScreenHandlerMixin extends ScreenHandlerMixin implements ScreenHandlerAccessor, IPlayerScreenHandler {
 
+	@Shadow @Mutable
+	public CraftingInventory craftingInput = getProperCraftingInventory();
 	@Shadow @Final
 	private PlayerEntity owner;
+	
+	/**Create 2x2 or 3x3 crafting inventory depending on config (can't do this in same line initializer for some reason)*/
+	@Unique
+	private CraftingInventory getProperCraftingInventory() {
+		return Config.expandedCrafting ? 
+				new CraftingInventory((PlayerScreenHandler)(Object)this, 3, 3) : 
+					new CraftingInventory((PlayerScreenHandler)(Object)this, 2, 2);
+	}
+
+	@Unique
+	@Override
+	public PlayerEntity getPlayer() {
+		return this.owner;
+	}
 
 	@Unique
 	@Override
@@ -40,15 +59,16 @@ public abstract class PlayerScreenHandlerMixin extends ScreenHandlerMixin implem
 			ItemStack itemStack2 = slot.getStack();
 			itemStack = itemStack2.copy();
 			EquipmentSlot equipmentSlot = MobEntity.getPreferredEquipmentSlot(itemStack);
+			int extraCraftingSlots = Config.expandedCrafting ? 5 : 0;
 			// craft output -> anywhere
 			if (index == 0) {
-				if (!this.callInsertItem(itemStack2, 9, 45+Utils.getAdditionalSlots(player), true)) 
+				if (!this.callInsertItem(itemStack2, 9+extraCraftingSlots, 45+Utils.getAdditionalSlots(player)+extraCraftingSlots, true)) 
 					return ItemStack.EMPTY;
 				slot.onQuickTransfer(itemStack2, itemStack);
 			} 
 			// craft input -> anywhere
-			else if (index >= 1 && index < 5) { 
-				if (!this.callInsertItem(itemStack2, 9, 45+Utils.getAdditionalSlots(player), false)) 
+			else if (index >= 1 && index < 5+extraCraftingSlots) { 
+				if (!this.callInsertItem(itemStack2, 9+extraCraftingSlots, 45+Utils.getAdditionalSlots(player)+extraCraftingSlots, false)) 
 					return ItemStack.EMPTY;
 			} 
 			// armor -> anywhere

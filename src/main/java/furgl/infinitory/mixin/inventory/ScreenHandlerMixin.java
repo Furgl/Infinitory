@@ -42,7 +42,8 @@ import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.ClickType;
 import net.minecraft.util.collection.DefaultedList;
 
-@Mixin(ScreenHandler.class)
+// <1000 priority to fix crash with Carpet mod
+@Mixin(value = ScreenHandler.class, priority = 999)
 public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandlerAccessor {
 
 	@Unique
@@ -51,6 +52,9 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 	public int scrollbarMinY;
 	@Unique
 	public int scrollbarMaxY;
+	/**Make sure to adjust trinket slots to account for 3x3 crafting*/
+	@Unique
+	private boolean needToAdjustTrinketsSlots = true;
 
 	@Shadow
 	@Final
@@ -69,7 +73,7 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 	@Shadow
 	@Final
 	@Mutable
-	public DefaultedList<Slot> slots = SlotDefaultedList.of();
+	public DefaultedList<Slot> slots = SlotDefaultedList.of((ScreenHandler)(Object)this);
 
 	@Shadow
 	protected abstract void endQuickCraft();
@@ -122,7 +126,8 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 			Slot existingSlot = (Slot) ((SlotDefaultedList) this.slots).delegate.get(i);
 			if (existingSlot.id >= slot.id)
 				++existingSlot.id;
-			if (existingSlot.getIndex() >= slot.getIndex())
+			// adjust index if slot is after this one and part of player inventory
+			if (existingSlot.getIndex() >= slot.getIndex() && existingSlot.inventory instanceof PlayerInventory) 
 				((ISlot) existingSlot).setIndex(existingSlot.getIndex() + 1);
 		}
 		if (slot.id >= this.slots.size())
@@ -145,7 +150,8 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 			Slot existingSlot = (Slot) ((SlotDefaultedList) this.slots).delegate.get(i);
 			if (existingSlot.id >= slot.id)
 				--existingSlot.id;
-			if (existingSlot.getIndex() >= slot.getIndex())
+			// adjust index if slot is after this one and part of player inventory
+			if (existingSlot.getIndex() >= slot.getIndex() && existingSlot.inventory instanceof PlayerInventory) 
 				((ISlot) existingSlot).setIndex(existingSlot.getIndex() - 1);
 		}
 		return slot;
@@ -169,10 +175,10 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 			// if current amount of slots doesn't match additionalSlots
 			if (infinitorySlots.size() >= 27 && (infinitorySlots.size() - 27) != Utils.getAdditionalSlots(slot.player)) {				
 				int difference = Utils.getAdditionalSlots(slot.player) - (infinitorySlots.size() - 27);
-
+				
 				// add extra slots
 				for (int i = infinitorySlots.size() - 27; i < Utils.getAdditionalSlots(slot.player); ++i) {
-					InfinitorySlot addSlot = new InfinitorySlot((PlayerInventory) slot.inventory, slot.id + 27 + i, 36 + i/*41+i*/, x + (i % 9) * 18, y + (i / 9 + 3) * 18, slot.getBackgroundSprite(), SlotType.MAIN_EXTRA);
+					InfinitorySlot addSlot = new InfinitorySlot(slot.inventory, ((PlayerInventory) slot.inventory).player, slot.id + 27 + i, 36 + i/*41+i*/, x + (i % 9) * 18, y + (i / 9 + 3) * 18, slot.getBackgroundSprite(), SlotType.MAIN_EXTRA);
 					this.addSlot(addSlot);
 				}
 
@@ -181,8 +187,15 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 					this.removeSlot(infinitorySlots.get(27 + i - 1));
 
 				// adjust Trinkets slot IDs
-				if (Infinitory.trinketsDependency != null)
+				if (Infinitory.trinketsDependency != null) {
 					Infinitory.trinketsDependency.adjustTrinketSlots((ScreenHandler)(Object)this, difference, slot);
+					needToAdjustTrinketsSlots = false;
+				}
+			}
+			// adjust Trinket slots to account for 3x3 crafting
+			else if (Infinitory.trinketsDependency != null && needToAdjustTrinketsSlots) {
+				Infinitory.trinketsDependency.adjustTrinketSlots((ScreenHandler)(Object)this, 0, slot);
+				needToAdjustTrinketsSlots = false;
 			}
 		}
 	}

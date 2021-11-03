@@ -14,14 +14,11 @@ import net.fabricmc.api.ModInitializer;
 
 public class Infinitory implements ModInitializer, ClientModInitializer {
 	 	
-	/**
-	 * Fixed an issue causing Infinitory to fail to load sometimes
-	 * Fixed an issue causing some Trinket slots to be offset when the inventory expands
+	/** Changelog
+	 * Added support for crafting in the inventory with large item stacks
+	 * Added 3x3 crafting grid to the inventory
 	 * 
-	 * TEST charm mod?
 	 * FIXME creative inventory fucked with Charms?
-	 * 
-	 * TODO 3x3 crafting grid
 	 * TODO expand inventory
 	 * TODO search bar
 	 */
@@ -30,6 +27,7 @@ public class Infinitory implements ModInitializer, ClientModInitializer {
 	public static final String MODID = "infinitory";
 	
 	public static CommonProxy proxy;
+	
 	@Nullable
 	public static Dependency trinketsDependency;
 

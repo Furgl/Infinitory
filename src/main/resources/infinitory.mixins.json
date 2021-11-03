@@ -20,6 +20,7 @@
   	"render.CreativeInventoryScreenMixin",
   	"render.MouseMixin",
   	"render.HandledScreenMixin",
+  	"render.InventoryScreenMixin",
   	"network.MinecraftClientMixin"
     ],
   "injectors": {

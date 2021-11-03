@@ -12,7 +12,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 
-import furgl.infinitory.Infinitory;
 import furgl.infinitory.config.Config;
 import furgl.infinitory.impl.inventory.IPlayerInventory;
 import furgl.infinitory.impl.inventory.IScreenHandler;
@@ -29,6 +28,7 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.CreativeInventoryScreen;
 import net.minecraft.client.gui.screen.ingame.CreativeInventoryScreen.CreativeScreenHandler;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
+import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.client.gui.widget.TexturedButtonWidget;
 import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.util.math.MatrixStack;
@@ -41,7 +41,6 @@ import net.minecraft.screen.slot.Slot;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 
 @Environment(EnvType.CLIENT)
@@ -52,14 +51,13 @@ public abstract class HandledScreenMixin<T extends ScreenHandler> extends Screen
 	protected int x;
 	@Shadow
 	protected int y;
+	@Shadow
+	protected int backgroundWidth;
 	@Shadow @Final
 	protected T handler;
-	@Unique
-	private static final Identifier VANILLA_BACKGROUND = new Identifier("textures/gui/container/creative_inventory/tab_items.png");
-	@Unique
-	private static final Identifier VANILLA_SCROLLBAR = new Identifier("textures/gui/container/creative_inventory/tabs.png");
-	@Unique
-	private static final Identifier TEXTURES = new Identifier(Infinitory.MODID, "textures/gui/container/inventory/inventory.png");
+	@Shadow
+	protected int titleX;
+
 	@Unique
 	private boolean scrolling;
 	@Unique
@@ -84,7 +82,7 @@ public abstract class HandledScreenMixin<T extends ScreenHandler> extends Screen
 	public void init(CallbackInfo ci) {
 		IPlayerInventory inv = ((IPlayerInventory)this.playerInventory);
 		// sorting type button
-		this.buttonSortingType = new InfinitoryTexturedButtonWidget(0, 0, 16, 16, 1, inv.getSortingType().ordinal() * 17+1, 100, TEXTURES, 256, 256, (button) -> {
+		this.buttonSortingType = new InfinitoryTexturedButtonWidget(0, 0, 16, 16, 1, inv.getSortingType().ordinal() * 17+1, 100, Utils.TEXTURES, 256, 256, (button) -> {
 			ClientPlayNetworking.send(PacketManager.SORTING_TYPE_PACKET_ID, PacketByteBufs.empty());
 			inv.setSortingType(inv.getSortingType().getNextType());
 			((InfinitoryTexturedButtonWidget)button).v = inv.getSortingType().ordinal() * 17+1;
@@ -98,7 +96,7 @@ public abstract class HandledScreenMixin<T extends ScreenHandler> extends Screen
 		}, Text.of(""));
 		this.addDrawableChild(buttonSortingType);
 		// sorting ascending button
-		this.buttonSortingDirection = new InfinitoryTexturedButtonWidget(0, 0, 16, 16, 18, inv.getSortingAscending() ? 18 : 1, 100, TEXTURES, 256, 256, (button) -> {
+		this.buttonSortingDirection = new InfinitoryTexturedButtonWidget(0, 0, 16, 16, 18, inv.getSortingAscending() ? 18 : 1, 100, Utils.TEXTURES, 256, 256, (button) -> {
 			ClientPlayNetworking.send(PacketManager.SORTING_ASCENDING_PACKET_ID, PacketByteBufs.empty());
 			inv.setSortAscending(!((IPlayerInventory)this.playerInventory).getSortingAscending());
 			((InfinitoryTexturedButtonWidget)button).v = inv.getSortingAscending() ? 18 : 1;
@@ -124,7 +122,7 @@ public abstract class HandledScreenMixin<T extends ScreenHandler> extends Screen
 	}
 
 	@Unique
-	private int getScrollbarX() {
+	protected int getScrollbarX() {
 		if (this.handler instanceof IScreenHandler)
 			return ((IScreenHandler)this.handler).getScrollbarX();
 		else
@@ -132,7 +130,7 @@ public abstract class HandledScreenMixin<T extends ScreenHandler> extends Screen
 	}
 
 	@Unique
-	private int getScrollbarMinY() {
+	protected int getScrollbarMinY() {
 		if (this.handler instanceof IScreenHandler)
 			return ((IScreenHandler)this.handler).getScrollbarMinY();
 		else
@@ -140,7 +138,7 @@ public abstract class HandledScreenMixin<T extends ScreenHandler> extends Screen
 	}
 
 	@Unique
-	private int getScrollbarMaxY() {
+	protected int getScrollbarMaxY() {
 		if (this.handler instanceof IScreenHandler)
 			return ((IScreenHandler)this.handler).getScrollbarMaxY();
 		else
@@ -227,14 +225,19 @@ public abstract class HandledScreenMixin<T extends ScreenHandler> extends Screen
 		return this.playerInventory.main.size() > 36 && this.shouldShowSortingButtons();
 	}
 
+	@Unique
+	protected boolean shouldShowExpandedCrafting() {
+		return Config.expandedCrafting && (((Object)this) instanceof InventoryScreen);
+	}
+
 	@Inject(method = "render", at = @At(value = "INVOKE"))
-	private void renderInvoke(MatrixStack matrices, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+	private void renderInvoke(MatrixStack matrix, int mouseX, int mouseY, float delta, CallbackInfo ci) {
 		// reset button positions and visibility
 		resetButtons();
 	}
 
 	@Inject(method = "render", at = @At(value = "TAIL"))
-	private void renderTail(MatrixStack matrices, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+	private void renderTail(MatrixStack matrix, int mouseX, int mouseY, float delta, CallbackInfo ci) {
 		// render scrollbar
 		if (this.shouldShowScrollbar()) {
 			RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
@@ -244,21 +247,21 @@ public abstract class HandledScreenMixin<T extends ScreenHandler> extends Screen
 			int maxY = this.y + this.getScrollbarMaxY();
 			boolean creativeScreen = ((Object)this) instanceof CreativeInventoryScreen;
 			// draw slider background using vanilla textures
-			RenderSystem.setShaderTexture(0, VANILLA_BACKGROUND);
+			RenderSystem.setShaderTexture(0, Utils.VANILLA_BACKGROUND);
 			if (creativeScreen) {// only draw inside for creative screen				
-				this.drawTexture(matrices, x-5, minY-1, 174, 17, 14, 50); // top half
-				this.drawTexture(matrices, x-5, minY+10, 174, 86, 14, 43); // bottom half
+				this.drawTexture(matrix, x-5, minY-1, 174, 17, 14, 50); // top half
+				this.drawTexture(matrix, x-5, minY+10, 174, 86, 14, 43); // bottom half
 			}
 			else { // draw full
-				this.drawTexture(matrices, x-5, minY-7, 174, 0, 21, 10); // top half
-				this.drawTexture(matrices, x-5, minY+10, 174, 86, 21, 50); // bottom half
-				this.drawTexture(matrices, x-5, minY-2, 174, 16, 21, 15); // scrollbar top
-				this.drawTexture(matrices, x-5, minY-7, 192, 3, 2, 1); // fix outline top
-				this.drawTexture(matrices, x-5, minY+59, 192, 3, 2, 1); // fix outline bottom
+				this.drawTexture(matrix, x-5, minY-7, 174, 0, 21, 10); // top half
+				this.drawTexture(matrix, x-5, minY-7, 192, 3, 2, 1); // fix outline top
+				this.drawTexture(matrix, x-5, minY+10, 174, 86, 21, 50); // bottom half
+				this.drawTexture(matrix, x-5, minY-2, 174, 16, 21, 15); // scrollbar top
+				this.drawTexture(matrix, x-5, minY+59, 192, 3, 2, 1); // fix outline bottom
 			}
 			// foreground
-			RenderSystem.setShaderTexture(0, VANILLA_SCROLLBAR);
-			this.drawTexture(matrices, x-4, minY + (int)((float)(maxY - minY - 17) * Utils.getScrollPosition(this.playerInventory.player)), 232, 0, 12, 15);
+			RenderSystem.setShaderTexture(0, Utils.VANILLA_SCROLLBAR);
+			this.drawTexture(matrix, x-4, minY + (int)((float)(maxY - minY - 17) * Utils.getScrollPosition(this.playerInventory.player)), 232, 0, 12, 15);
 		}
 	}
 

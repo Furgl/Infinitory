@@ -8,8 +8,7 @@ import org.spongepowered.asm.mixin.injection.ModifyConstant;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import furgl.infinitory.Infinitory;
-import furgl.infinitory.impl.inventory.IPlayerInventory;
+import furgl.infinitory.config.Config;
 import furgl.infinitory.impl.inventory.ISlot;
 import furgl.infinitory.impl.render.IHandledScreen;
 import furgl.infinitory.utils.Utils;
@@ -55,49 +54,55 @@ public abstract class CreativeInventoryScreenMixin extends AbstractInventoryScre
 	 * Without this, changes to hotbar when in non-inventory tabs in Creative mode will update extra slots as well*/
 	@ModifyConstant(method = "onMouseClick", constant = @Constant(intValue = 36))
 	public int onMouseClickFix(int value) {
-		return value + Utils.getAdditionalSlots(MinecraftClient.getInstance().player);
+		return value + Utils.getAdditionalSlots(MinecraftClient.getInstance().player)+(Config.expandedCrafting ? 5 : 0);
 	}
 
 	@Inject(method = "setSelectedTab", at = @At(value = "INVOKE", target = "Lnet/minecraft/screen/slot/Slot;<init>(Lnet/minecraft/inventory/Inventory;III)V"))
 	public void setSelectedTabFixTrinketsDependency(ItemGroup group, CallbackInfo ci) {
+		// copied from setSelectedTab to add the rest of the slots (Trinkets only lets it add 0-45 slots) and account for extra crafting slots
 		ScreenHandler screenHandler = this.client.player.playerScreenHandler;
-		int slotSize = 46 + ((IPlayerInventory)this.client.player.getInventory()).getAdditionalSlots();
-		if (Infinitory.trinketsDependency != null && slotSize > 46) {
-			// copied from setSelectedTab to add the rest of the slots (Trinkets only lets it add 0-45 slots)
-			for(int l = 45; l < slotSize; ++l) {
-				int t;
-				int v;
-				int w;
-				int x;
-				int aa;
-				if (l >= 5 && l < 9) {
-					v = l - 5;
-					w = v / 2;
-					x = v % 2;
-					t = 54 + w * 54;
-					aa = 6 + x * 27;
-				} else if (l >= 0 && l < 5) {
-					t = -2000;
-					aa = -2000;
-				} else if (l == 45) {
-					t = 35;
-					aa = 20;
-				} else {
-					v = l - 9;
-					w = v % 9;
-					x = v / 9;
-					t = 9 + w * 18;
-					if (l >= 36) {
-						aa = 112;
-					} else {
-						aa = 54 + x * 18;
-					}
-				}
+		((CreativeInventoryScreen.CreativeScreenHandler)this.handler).slots.clear();
+		int extraCraftingSlots = Config.expandedCrafting ? 5 : 0; // added to account for extra crafting slots
+        for(int index = 0; index < screenHandler.slots.size(); ++index) {
+           int x = 0;
+           int k;
+           int j;
+           int i;
+           int y = 0;
+           // armor slots
+           if (index >= 5+extraCraftingSlots && index < 9+extraCraftingSlots) {
+				k = index-extraCraftingSlots - 5;
+				j = k / 2;
+				i = k % 2;
+				x = 54 + j * 54;
+				y = 6 + i * 27;
+           } 
+           // crafting slots
+           else if (index >= 0 && index < 5+extraCraftingSlots) {
+              x = -2000;
+              y = -2000;
+           } 
+           // offhand
+           else if (index == 45+extraCraftingSlots) {
+              x = 35;
+              y = 20;
+           } 
+           // main inventory
+           else {
+              k = index-extraCraftingSlots - 9;
+              j = k % 9;
+              i = k / 9;
+              x = 9 + j * 18;
+              if (index >= 36+extraCraftingSlots) {
+                 y = 112;
+              } else {
+                 y = 54 + i * 18;
+              }
+           }
 
-				Slot slot = new CreativeInventoryScreen.CreativeSlot((Slot)screenHandler.slots.get(l), l, t, aa);
-				((CreativeInventoryScreen.CreativeScreenHandler)this.handler).slots.add(slot);
-			}
-		}
+           Slot slot = new CreativeInventoryScreen.CreativeSlot((Slot)screenHandler.slots.get(index), index, x, y);
+           ((CreativeInventoryScreen.CreativeScreenHandler)this.handler).slots.add(slot);
+        }
 	}
 
 }

@@ -8,9 +8,8 @@ import net.minecraft.screen.ScreenHandler;
 public interface Dependency {
 	
 	// trinkets
-	
 	/**Adjust trinket slot IDs*/
-	public abstract void adjustTrinketSlots(ScreenHandler handler, int difference, InfinitorySlot slot); 
+	default void adjustTrinketSlots(ScreenHandler handler, int difference, InfinitorySlot slot) {} 
 
 	/**Create dependencies*/
 	public static void init() {

@@ -10,6 +10,7 @@ import com.google.common.collect.Maps;
 import dev.emi.trinkets.TrinketPlayerScreenHandler;
 import dev.emi.trinkets.api.SlotGroup;
 import dev.emi.trinkets.data.EntitySlotLoader;
+import furgl.infinitory.config.Config;
 import furgl.infinitory.impl.inventory.InfinitorySlot;
 import furgl.infinitory.utils.Utils;
 import net.minecraft.entity.EntityType;
@@ -47,17 +48,23 @@ public class TrinketsDependency implements Dependency {
 					entry.getValue().write(nbt);
 					NbtCompound innerNbt = nbt.getCompound("GroupData");
 					int slotId = innerNbt.getInt("SlotId");
-					// not -1 and past main inventory
-					if (slotId != -1 && slotId > 35) {
+					// valid slot
+					if (slotId != -1) {
 						int newSlotId; // newSlotId = original slot id + additional slots
 						// get original slot id
 						if (trinketSlotGroupIds.containsKey(entry.getKey()))
-							newSlotId = trinketSlotGroupIds.get(entry.getKey())+Utils.getAdditionalSlots(slot.player);
+							newSlotId = trinketSlotGroupIds.get(entry.getKey());
 						// handler is original slot id
 						else {
 							trinketSlotGroupIds.put(entry.getKey(), slotId);
-							newSlotId = slotId + +Utils.getAdditionalSlots(slot.player);
+							newSlotId = slotId;
 						}
+						// if past main inventory, add additional slots
+						if (slotId > (Config.expandedCrafting ? 40 : 35))
+							newSlotId += Utils.getAdditionalSlots(slot.player);
+						// if 3x3 crafting, add extra crafting slots
+						if (Config.expandedCrafting)
+							newSlotId += 5;
 						innerNbt.putInt("SlotId", newSlotId);
 					}
 					newGroups.put(entry.getKey(), SlotGroup.read(nbt));

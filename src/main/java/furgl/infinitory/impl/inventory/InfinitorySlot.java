@@ -6,7 +6,7 @@ import com.mojang.datafixers.util.Pair;
 
 import furgl.infinitory.config.Config;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.PlayerInventory;
+import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.util.Identifier;
@@ -14,7 +14,7 @@ import net.minecraft.util.Identifier;
 public class InfinitorySlot extends Slot {
 
 	public enum SlotType {
-		MAIN_NORMAL(true), MAIN_EXTRA(true), ARMOR(false), OFFHAND(false), HOTBAR(false), UNKNOWN(false);
+		MAIN_NORMAL(true), MAIN_EXTRA(true), ARMOR(false), OFFHAND(false), HOTBAR(false), CRAFTING_INPUT(true), CRAFTING_OUTPUT(true), UNKNOWN(false);
 
 		public boolean stackNonStackables;
 		
@@ -49,9 +49,9 @@ public class InfinitorySlot extends Slot {
 	public PlayerEntity player;
 	public SlotType type;
 
-	public InfinitorySlot(PlayerInventory inventory, int id, int index, int x, int y, Pair<Identifier, Identifier> backgroundSprite, SlotType type) {
+	public InfinitorySlot(Inventory inventory, PlayerEntity player, int id, int index, int x, int y, Pair<Identifier, Identifier> backgroundSprite, SlotType type) {
 		super(inventory, index, x, y);
-		this.player = inventory.player;
+		this.player = player;
 		this.id = id;
 		this.originalX = x;
 		this.originalY = y;

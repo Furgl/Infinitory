@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "infinitory",
-  "version": "1.1.1",
+  "version": "1.2.0",
 
   "name": "Infinitory",
   "description": "Infinite inventory and stack size!",
@@ -24,6 +24,9 @@
     ],
     "client": [
     	"furgl.infinitory.Infinitory"
+    ],
+    "modmenu": [
+        "furgl.infinitory.impl.dependencies.ClothConfigModMenuDependency"
     ]
   },
   "mixins": [
