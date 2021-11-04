@@ -247,7 +247,7 @@ public abstract class HandledScreenMixin<T extends ScreenHandler> extends Screen
 			int maxY = this.y + this.getScrollbarMaxY();
 			boolean creativeScreen = ((Object)this) instanceof CreativeInventoryScreen;
 			// draw slider background using vanilla textures
-			RenderSystem.setShaderTexture(0, Utils.VANILLA_BACKGROUND);
+			RenderSystem.setShaderTexture(0, Utils.VANILLA_SEARCH_INVENTORY);
 			if (creativeScreen) {// only draw inside for creative screen				
 				this.drawTexture(matrix, x-5, minY-1, 174, 17, 14, 50); // top half
 				this.drawTexture(matrix, x-5, minY+10, 174, 86, 14, 43); // bottom half

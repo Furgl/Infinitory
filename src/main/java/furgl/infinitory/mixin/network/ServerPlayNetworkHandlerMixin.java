@@ -7,7 +7,7 @@ import org.spongepowered.asm.mixin.injection.ModifyConstant;
 import furgl.infinitory.config.Config;
 import net.minecraft.server.network.ServerPlayNetworkHandler;
 
-@Mixin(ServerPlayNetworkHandler.class)
+@Mixin(value = ServerPlayNetworkHandler.class, priority = 999)
 public abstract class ServerPlayNetworkHandlerMixin {
 	
 	@ModifyConstant(method = "onCreativeInventoryAction", constant = @Constant(intValue = 45))
@@ -15,7 +15,7 @@ public abstract class ServerPlayNetworkHandlerMixin {
 		return Integer.MAX_VALUE;
 	}
 	
-	@ModifyConstant(method = "onCreativeInventoryAction", constant = @Constant(intValue = 64))
+	@ModifyConstant(method = "onCreativeInventoryAction", constant = @Constant(intValue = 64), require = 0)
 	public int increaseMaxStackSize(int maxStackSize) {
 		return Config.maxStackSize;
 	}

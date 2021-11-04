@@ -15,12 +15,15 @@ import net.fabricmc.api.ModInitializer;
 public class Infinitory implements ModInitializer, ClientModInitializer {
 	 	
 	/** Changelog
-	 * Added support for crafting in the inventory with large item stacks
-	 * Added 3x3 crafting grid to the inventory
+	 * Fixed compatibility with the Stacc api
+	 * Fixed compatibility with Trinket slots sometimes being mis-aligned again
 	 * 
 	 * FIXME creative inventory fucked with Charms?
+	 * 
 	 * TODO expand inventory
 	 * TODO search bar
+	 * TODO player interface
+	 * TODO balancing
 	 */
 	
 	public static final String MODNAME = "Infinitory";

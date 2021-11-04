@@ -17,7 +17,7 @@ import net.minecraft.util.Pair;
 public class Utils {
 
 	public static final Identifier VANILLA_INVENTORY = new Identifier("textures/gui/container/inventory.png");
-	public static final Identifier VANILLA_BACKGROUND = new Identifier("textures/gui/container/creative_inventory/tab_item_search.png");
+	public static final Identifier VANILLA_SEARCH_INVENTORY = new Identifier("textures/gui/container/creative_inventory/tab_item_search.png"); 
 	public static final Identifier VANILLA_SCROLLBAR = new Identifier("textures/gui/container/creative_inventory/tabs.png");
 	public static final Identifier TEXTURES = new Identifier(Infinitory.MODID, "textures/gui/container/inventory/inventory.png");
 	/**Coords of 3x3 top-left crafting input slot*/

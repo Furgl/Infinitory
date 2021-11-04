@@ -54,7 +54,7 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 	public int scrollbarMaxY;
 	/**Make sure to adjust trinket slots to account for 3x3 crafting*/
 	@Unique
-	private boolean needToAdjustTrinketsSlots = true;
+	private boolean needToAdjustTrinketsSlots;
 
 	@Shadow
 	@Final
@@ -75,6 +75,11 @@ public abstract class ScreenHandlerMixin implements IScreenHandler, ScreenHandle
 	@Mutable
 	public DefaultedList<Slot> slots = SlotDefaultedList.of((ScreenHandler)(Object)this);
 
+	@Inject(method = "<init>", at = @At(value = "RETURN"))
+	public void constructor(CallbackInfo ci) {
+		needToAdjustTrinketsSlots = true;
+	}
+	
 	@Shadow
 	protected abstract void endQuickCraft();
 

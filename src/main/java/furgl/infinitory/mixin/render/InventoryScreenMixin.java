@@ -46,7 +46,7 @@ public abstract class InventoryScreenMixin extends HandledScreenMixin<PlayerScre
 			RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
 			RenderSystem.setShader(GameRenderer::getPositionTexShader);
 			// background
-			RenderSystem.setShaderTexture(0, Utils.VANILLA_BACKGROUND);
+			RenderSystem.setShaderTexture(0, Utils.VANILLA_SEARCH_INVENTORY);
 			int x = this.getScrollbarX();
 			int y = 7;
 			this.drawTexture(matrix, x-5, y-7, 174, 0, 21, 10); // top half
@@ -70,6 +70,17 @@ public abstract class InventoryScreenMixin extends HandledScreenMixin<PlayerScre
 			this.drawTexture(matrix, Utils.CRAFTING_SLOTS_OUTPUT.getLeft()-20, Utils.CRAFTING_SLOTS_OUTPUT.getRight()-1, 134, 27, 18, 18);
 			matrix.pop();
 		}
+		/*// render searchbar
+		matrix.push();
+		matrix.translate(x, y, 0.0D);
+		RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+		RenderSystem.setShader(GameRenderer::getPositionTexShader);
+		RenderSystem.setShaderTexture(0, Utils.VANILLA_BACKGROUND);
+		
+		matrix.pop();*/
+		
+		// reset texture
+		RenderSystem.setShaderTexture(0, Utils.VANILLA_INVENTORY);
 	}
 
 }
