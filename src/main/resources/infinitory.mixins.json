@@ -12,7 +12,6 @@
   	"accessors.ScreenHandlerAccessor",
   	"items.ItemStackMixin",
   	"network.PacketByteBufMixin",
-  	"network.ServerPlayNetworkHandlerMixin",
   	"network.ServerPlayerEntityMixin"
     ],
   "client": [

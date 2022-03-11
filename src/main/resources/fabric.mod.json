@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "infinitory",
-  "version": "1.2.0",
+  "version": "1.2.2",
 
   "name": "Infinitory",
   "description": "Infinite inventory and stack size!",
@@ -34,7 +34,7 @@
   ],
 
   "depends": {
-    "fabricloader": ">=0.11.3",
+    "fabricloader": ">=0.13.3",
     "fabric": "*",
     "minecraft": "1.18.x",
     "java": ">=16"
