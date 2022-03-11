@@ -368,7 +368,7 @@ public abstract class PlayerInventoryMixin implements Inventory, IPlayerInventor
 			i -= j; // redo
 		}
 		itemStack.increment(j);
-		itemStack.setCooldown(5);
+		// itemStack.setCooldown(5); // lospejos commented out
 		ci.setReturnValue(i);
 	}
 
