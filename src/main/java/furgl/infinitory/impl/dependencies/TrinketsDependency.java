@@ -70,7 +70,7 @@ public class TrinketsDependency implements Dependency {
 					newGroups.put(entry.getKey(), SlotGroup.read(nbt));
 				}
 				slots.put(EntityType.PLAYER, newGroups);
-				((TrinketPlayerScreenHandler) handler).updateTrinketSlots(true);
+				((TrinketPlayerScreenHandler) handler).trinkets$updateTrinketSlots(true); //updateTrinketSlots(true);
 			}
 		}
 		catch (Exception e) {
